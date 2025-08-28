@@ -131,7 +131,7 @@ const toggleAirportSelect = () => {
 }
 
 const handleNavClick = (item: any) => {
-   // emit('navigate', item)
+   emit('navigate', item)
 }
 
 // 移除滑块相关监听器

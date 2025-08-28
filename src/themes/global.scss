@@ -61,7 +61,8 @@
   --spacing-xl: 32px;
   
   // Typography
-  --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-family: Inter, 'Helvetica Neue', Helvetica, 'PingFang SC',
+  'Hiragino Sans GB', 'Microsoft YaHei', '微软雅黑', Arial, sans-serif;
   --font-size-xs: 12px;
   --font-size-sm: 14px;
   --font-size-md: 16px;
@@ -125,11 +126,6 @@ html {
   line-height: 1.5;
   color: var(--text-primary);
   background-color: var(--primary-bg);
-  
-  // Set default theme to day mode
-  &:not([data-theme]) {
-    // Day mode is the default
-  }
 }
 
 body {
