@@ -211,13 +211,21 @@ onUnmounted(() => {
 .airport-sub-nav {
     display: flex;
     flex-direction: column;
-    justify-content: center;
     height: 100%;
     padding: var(--spacing-sm) 0;
-    align-items: center;
+    overflow: hidden; // 防止动画时文字溢出
+    
+    // 初始状态：在右侧外面
+    transform: translateX(100%);
+    opacity: 0;
+    transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    
+    // 动画进入状态
+    animation: slideInFromRight 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
 
     .home-section {
         padding: 0 var(--spacing-sm);
+        margin-top: 30px;
         margin-bottom: var(--spacing-md);
         display: flex;
         justify-content: center;
@@ -340,6 +348,7 @@ onUnmounted(() => {
                 position: relative;
                 z-index: 2;
                 width: 100%;
+                min-width: 0; // 允许flex子项收缩
 
                 .nav-button {
                     width: 100%;
@@ -357,6 +366,7 @@ onUnmounted(() => {
                     min-height: 60px;
                     position: relative;
                     gap: 4px;
+                    min-width: 0; // 允许flex子项收缩
 
                     &:hover {
                         color: var(--nav-text);
@@ -425,6 +435,11 @@ onUnmounted(() => {
                 .selector-content {
                     .nav-label {
                         font-size: 8px; // 稍微缩小字体
+                        white-space: nowrap;
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                        max-width: 100%;
+                        width: 100%;
                     }
                 }
             }
@@ -436,12 +451,18 @@ onUnmounted(() => {
                     .nav-button {
                         .nav-label {
                             font-size: 10px; // 稍微缩小字体
+                            white-space: nowrap;
+                            overflow: hidden;
+                            text-overflow: ellipsis;
+                            max-width: 100%;
+                            width: 100%;
                         }
 
                         .nav-count {
                             min-width: 18px;
                             height: 16px;
                             font-size: 9px;
+                            flex-shrink: 0; // 防止计数徽章被压缩
                         }
                     }
                 }
@@ -458,10 +479,16 @@ onUnmounted(() => {
                 .selector-content {
                     .nav-label {
                         font-size: 7px; // 更小的字体
+                        white-space: nowrap;
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                        max-width: 100%;
+                        width: 100%;
                     }
                     
                     .nav-icon {
                         font-size: inherit; // 保持图标大小
+                        flex-shrink: 0;
                     }
                 }
             }
@@ -473,17 +500,35 @@ onUnmounted(() => {
                     .nav-button {
                         .nav-label {
                             font-size: 9px; // 更小的字体
+                            white-space: nowrap;
+                            overflow: hidden;
+                            text-overflow: ellipsis;
+                            max-width: 100%;
+                            width: 100%;
                         }
 
                         .nav-count {
                             min-width: 16px;
                             height: 14px;
                             font-size: 8px;
+                            flex-shrink: 0;
                         }
                     }
                 }
             }
         }
+    }
+}
+
+// 从右侧滑入的关键帧动画
+@keyframes slideInFromRight {
+    0% {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    100% {
+        transform: translateX(0);
+        opacity: 1;
     }
 }
 </style>

@@ -283,12 +283,10 @@ defineExpose({
   display: flex;
   flex-direction: column;
   opacity: 0;
-  transform: scale(0.95);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   
   &.show {
     opacity: 1;
-    transform: scale(1);
   }
 
   // 桌面端样式
@@ -300,6 +298,14 @@ defineExpose({
     width: 360px;
     height: calc(100vh - var(--header-height) - 40px);
     margin: var(--spacing-lg) 0;
+    
+    // 桌面端动画：从左侧滑入
+    transform: translateX(-100%);
+    
+    &.show {
+      transform: translateX(0);
+      opacity: 1;
+    }
     
     @media (min-width: 1920px) {
       // left: calc(var(--nav-width-sidebar-xl) + var(--spacing-lg));
@@ -331,10 +337,12 @@ defineExpose({
     z-index: calc(var(--z-modal) + 1);
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;
     
+    // 移动端动画：从底部滑入
     transform: translateY(100%);
     
     &.show {
       transform: translateY(0);
+      opacity: 1;
     }
   }
 

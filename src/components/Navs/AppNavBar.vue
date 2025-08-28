@@ -178,31 +178,32 @@ watch(isHome, (newValue, oldValue) => {
     if (newValue !== oldValue) {
         isAnimating.value = true
         
-        // 根据设备类型确定动画时长
-        const animationDuration = isMobile.value ? 400 : 300
+        // 统一动画时长
+        const animationDuration = 400
         
         if (!newValue) {
-            // 进入子页面 - 主导航滑出，子导航滑入
+            // 进入子页面 - 主导航向左滑出，子导航从右侧滑入
             showList.value = false
             
-            // 延迟显示子导航，创建流畅的过渡
+            // 稍微延迟显示子导航，让主导航先开始滑出
             setTimeout(() => {
                 if (currentPage.value === 'airports') {
                     showSubNav.value = true
                 }
-            }, animationDuration * 0.6) // 主导航滑出60%时开始显示子导航
+            }, 100)
             
             setTimeout(() => {
                 isAnimating.value = false
             }, animationDuration)
             
         } else {
-            // 返回首页 - 子导航滑出，主导航滑入
+            // 返回首页 - 子导航向右滑出，主导航从左侧滑入
             showSubNav.value = false
             
+            // 稍微延迟显示主导航，让子导航先开始滑出
             setTimeout(() => {
                 showList.value = true
-            }, 100) // 稍微延迟让子导航先开始滑出
+            }, 100)
             
             setTimeout(() => {
                 isAnimating.value = false
@@ -252,9 +253,10 @@ onUnmounted(() => {
 .app-nav-bar {
     position: relative;
     width: var(--nav-width-sidebar-md);
-    height: calc(100vh - var(--header-height) - 40px);
+    // height: calc(100vh - var(--header-height) - 40px);
+    height: 100%;
     background: var(--nav-bg);
-    border-radius: var(--radius-md);
+    // border-radius: var(--radius-md);
     padding: var(--spacing-sm) 0;
     box-shadow: var(--shadow-medium);
 
@@ -267,12 +269,12 @@ onUnmounted(() => {
         align-items: center;
         height: 100%;
         gap: var(--spacing-md);
-        justify-content: center;
+        // justify-content: center;
         
         // 动画相关样式
         transform: translateX(0);
         opacity: 1;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
         
         // 向左滑出动画
         &.slide-out {
@@ -280,9 +282,10 @@ onUnmounted(() => {
             opacity: 0;
         }
         
-        // 从左侧滑入动画 - 初始状态在左侧
+        // 从左侧滑入动画
         &.slide-in {
-            animation: slideInFromLeft 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+            transform: translateX(0);
+            opacity: 1;
         }
         
         // 动画进行中时禁用指针事件
@@ -361,7 +364,7 @@ onUnmounted(() => {
         border-radius: var(--radius-md);
         opacity: 0;
         transform: translateX(100%);
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 
         &.slide-in-right {
             transform: translateX(0);
@@ -379,7 +382,7 @@ onUnmounted(() => {
     }
 }
 
-// 从左侧滑入的关键帧动画 (桌面端)
+// 动画关键帧定义 - 统一的缓动动画
 @keyframes slideInFromLeft {
     0% {
         transform: translateX(-100%);
@@ -391,39 +394,6 @@ onUnmounted(() => {
     }
 }
 
-// 从底部滑入的关键帧动画 (移动端) - 简洁非线性动画
-@keyframes slideInFromBottom {
-    0% {
-        transform: translateY(100%);
-        opacity: 0;
-    }
-    30% {
-        transform: translateY(20%);
-        opacity: 0.6;
-    }
-    60% {
-        transform: translateY(5%);
-        opacity: 0.85;
-    }
-    100% {
-        transform: translateY(0);
-        opacity: 1;
-    }
-}
-
-// 从左侧滑入的关键帧动画 (移动端主导航)
-@keyframes slideInFromLeft {
-    0% {
-        transform: translateX(-100%);
-        opacity: 0;
-    }
-    100% {
-        transform: translateX(0);
-        opacity: 1;
-    }
-}
-
-// 从右侧滑入的关键帧动画 (子导航)
 @keyframes slideInFromRight {
     0% {
         transform: translateX(100%);
@@ -511,19 +481,6 @@ onUnmounted(() => {
             align-items: stretch;
             gap: var(--spacing-xs);
             padding: var(--spacing-md) 0;
-            
-            // 移动端动画 - 覆盖桌面端的transition，使用流畅的非线性缓动
-            transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-            
-            // 移动端动画调整 - 向左滑出
-            &.slide-out {
-                transform: translateX(-100%);
-                opacity: 0;
-            }
-            
-            &.slide-in {
-                animation: slideInFromLeft 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
-            }
 
             .nav-item {
                 flex: none;
@@ -551,7 +508,7 @@ onUnmounted(() => {
             }
         }
 
-        // 移动端子导航容器
+        // 移动端子导航容器 - 使用与桌面端相同的动画
         .sub-nav-container {
             top: 0;
             left: 0;
@@ -559,15 +516,6 @@ onUnmounted(() => {
             height: 100%;
             background: var(--nav-bg);
             border-radius: 0;
-            
-            &.slide-in-right {
-                animation: slideInFromBottom 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
-            }
-
-            &.slide-out-right {
-                transform: translateY(100%);
-                opacity: 0;
-            }
         }
     }
 }
