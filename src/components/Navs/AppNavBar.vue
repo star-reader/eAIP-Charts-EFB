@@ -57,7 +57,8 @@ import {
     FlashOutline,
     BookmarkOutline,
     DocumentTextOutline,
-    AddCircleOutline
+    AddCircleOutline,
+    DocumentAttachOutline
 } from '@vicons/ionicons5'
 import NavBarContainer from './NavBarContainer.vue'
 import AirportSubNavBar from './SubNavBar/AirportSubNavBar.vue'
@@ -117,6 +118,12 @@ const navItems = ref([
         label: 'NOTAM',
         icon: markRaw(DocumentTextOutline),
         route: '/notam'
+    },
+    {
+        id: 'pdf-demo',
+        label: 'PDF演示',
+        icon: markRaw(DocumentAttachOutline),
+        route: '/pdf-demo'
     }
 ])
 

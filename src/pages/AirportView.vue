@@ -17,18 +17,30 @@
       @select-chart="handleChartSelect"
     />
 
+    <!-- PDF Viewer or Default Content -->
     <div class="airport-content">
-      <h1>Airport View Page</h1>
-      <p>This is where airport-specific content will be displayed.</p>
+      <PdfViewer 
+        v-if="pdfUrl"
+        :src="pdfUrl"
+        @page-change="handlePdfPageChange"
+        @zoom-change="handlePdfZoomChange"
+        @loaded="handlePdfLoaded"
+        @error="handlePdfError"
+      />
+      <div v-else class="default-content">
+        <h1>机场图查看</h1>
+        <p>请选择机场和航图进行查看</p>
+      </div>
     </div>
   </div>
 </template>
 
 <script lang='ts' setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import pubsub from 'pubsub-js'
 import AirportSelection from '@/components/Selection/AirportSelection.vue'
 import CategorizedCharts from '@/components/Selection/CategorizedCharts.vue'
+import PdfViewer from '@/components/Common/PDFViewer/PdfViewer.vue'
 
 // Airport Selection state
 const showAirportSelection = ref(false)
@@ -38,6 +50,13 @@ const currentAirportData = ref<AirportList | null>(null)
 // Charts Selection state
 const showChartsSelection = ref(false)
 const activeChartCategory = ref('airport-chart')
+const selectedChart = ref<OfficialAD | null>(null)
+
+// PDF URL computation
+const pdfUrl = computed(() => {
+  if (!selectedChart.value?.pdfPath) return null
+  return import.meta.env.VITE_API_HOST + '/data' + selectedChart.value.pdfPath
+})
 
 // Airport Selection handlers
 const handleAirportSelectionClose = () => {
@@ -58,8 +77,27 @@ const handleChartsSelectionClose = () => {
 
 const handleChartSelect = (chart: OfficialAD) => {
   showChartsSelection.value = false
+  selectedChart.value = chart
   console.log('Selected chart:', chart)
-  // 这里可以添加打开PDF查看器或其他逻辑
+  console.log('PDF path:', chart.pdfPath)
+  console.log('PDF URL will be:', import.meta.env.VITE_API_HOST + '/data' + chart.pdfPath)
+}
+
+// PDF Viewer event handlers
+const handlePdfPageChange = (page: number) => {
+  console.log('PDF页面变更:', page)
+}
+
+const handlePdfZoomChange = (zoom: number) => {
+  console.log('PDF缩放变更:', zoom)
+}
+
+const handlePdfLoaded = (totalPages: number) => {
+  console.log('PDF加载完成，总页数:', totalPages)
+}
+
+const handlePdfError = (error: string) => {
+  console.error('PDF加载错误:', error)
 }
 
 // PubSub event handlers
@@ -111,16 +149,29 @@ onUnmounted(() => {
 }
 
 .airport-content {
-  padding: var(--spacing-lg);
   height: 100%;
+  overflow: hidden;
   
-  h1 {
-    color: var(--text-primary);
-    margin-bottom: var(--spacing-md);
-  }
-  
-  p {
-    color: var(--text-secondary);
+  .default-content {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacing-lg);
+    text-align: center;
+    
+    h1 {
+      color: var(--text-primary);
+      margin: 0 0 var(--spacing-md) 0;
+      font-size: var(--font-size-xl);
+    }
+    
+    p {
+      color: var(--text-secondary);
+      margin: 0;
+      font-size: var(--font-size-md);
+    }
   }
 }
 </style>

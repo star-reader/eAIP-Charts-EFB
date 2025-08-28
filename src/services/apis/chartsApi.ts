@@ -37,6 +37,7 @@ const getOfficialAIC = async (): Promise<OfficialAIC[]> => {
     return axiosInstance.get(apiUrl.official.aicConfig)
 }
 
+
 export { getOfficialAD, getOfficialENR, 
     getOfficialAMDT, getOfficialSUP, 
     getOfficialNOTAM, getOfficialAIC
