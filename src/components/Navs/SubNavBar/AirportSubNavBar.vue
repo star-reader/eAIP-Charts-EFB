@@ -526,6 +526,10 @@ onUnmounted(() => {
         transform: translateX(100%);
         opacity: 0;
     }
+    60%{
+        transform: translateX(70%);
+        opacity: 0;
+    }
     100% {
         transform: translateX(0);
         opacity: 1;
