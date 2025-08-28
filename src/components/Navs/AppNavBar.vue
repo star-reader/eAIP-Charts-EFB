@@ -1,7 +1,14 @@
 <template>
     <NavBarContainer>
         <nav class="app-nav-bar">
-            <ul class="nav-list">
+            <ul 
+                class="nav-list" 
+                :class="{ 
+                    'slide-out': !showList, 
+                    'slide-in': showList && isAnimating,
+                    'animating': isAnimating 
+                }"
+            >
                 <li v-for="item in navItems" :key="item.id" class="nav-item">
                     <button class="nav-button" :class="{ 'active': activeItem === item.id }"
                         @click="handleNavClick(item)" :aria-label="item.label">
@@ -19,7 +26,7 @@
 </template>
 
 <script lang='ts' setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { Icon } from '@vicons/utils'
 import {
@@ -40,7 +47,11 @@ const isMobile = ref(false)
 
 // 从首页到点击到其他页面的导航，有动画和具体内容切换
 const currentPage = ref('home')
-const isHome = ref(currentPage.value === 'home')
+const isHome = computed(() => currentPage.value === 'home')
+
+// 动画控制
+const isAnimating = ref(false)
+const showList = ref(true)
 
 const navItems = ref([
     {
@@ -85,10 +96,23 @@ const iconSize = computed(() => isMobile.value ? '24' : '20')
 
 const handleNavClick = (item: any) => {
     activeItem.value = item.id
+    currentPage.value = item.id
     if (item.route) {
         router.push(item.route)
     }
 }
+
+// 返回首页的方法
+const goHome = () => {
+    currentPage.value = 'home'
+    activeItem.value = 'home'
+    router.push('/')
+}
+
+// 暴露给父组件使用
+defineExpose({
+    goHome
+})
 
 const handleResize = () => {
     isMobile.value = window.innerWidth < 768
@@ -104,10 +128,62 @@ const setActiveFromRoute = () => {
     }
 }
 
+// 监听路由变化，自动更新当前页面状态
+watch(() => route.path, (newPath) => {
+    const foundItem = navItems.value.find(item => 
+        item.route === newPath || (item.route !== '/' && newPath.startsWith(item.route))
+    )
+    
+    if (foundItem) {
+        activeItem.value = foundItem.id
+        currentPage.value = foundItem.id
+    } else if (newPath === '/') {
+        activeItem.value = 'home'
+        currentPage.value = 'home'
+    }
+})
+
+// 监听isHome变化，控制动画
+watch(isHome, (newValue, oldValue) => {
+    if (newValue !== oldValue) {
+        isAnimating.value = true
+        
+        // 根据设备类型确定动画时长
+        const animationDuration = isMobile.value ? 400 : 300
+        
+        if (!newValue) {
+            // 进入子页面，桌面端向左滑出，移动端向下滑出
+            showList.value = false
+            
+            // 动画完成后重置状态
+            setTimeout(() => {
+                isAnimating.value = false
+            }, animationDuration)
+        } else {
+            // 返回首页，桌面端从左侧滑入，移动端从底部滑入
+            // 先确保列表不可见，然后触发滑入动画
+            showList.value = false
+            
+            setTimeout(() => {
+                showList.value = true
+                
+                // 动画完成后重置状态
+                setTimeout(() => {
+                    isAnimating.value = false
+                }, animationDuration)
+            }, 50) // 小延迟确保动画正确触发
+        }
+    }
+})
+
 onMounted(() => {
     handleResize()
-    setActiveFromRoute()
+    // 初始化时设置当前路由状态，但不需要调用setActiveFromRoute，因为路由监听器会自动处理
     window.addEventListener('resize', handleResize)
+})
+
+onUnmounted(() => {
+    window.removeEventListener('resize', handleResize)
 })
 </script>
 
@@ -130,8 +206,28 @@ onMounted(() => {
         align-items: center;
         height: 100%;
         gap: var(--spacing-xs);
-
         justify-content: center;
+        
+        // 动画相关样式
+        transform: translateX(0);
+        opacity: 1;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        
+        // 向左滑出动画
+        &.slide-out {
+            transform: translateX(-100%);
+            opacity: 0;
+        }
+        
+        // 从左侧滑入动画 - 初始状态在左侧
+        &.slide-in {
+            animation: slideInFromLeft 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+        
+        // 动画进行中时禁用指针事件
+        &.animating {
+            pointer-events: none;
+        }
 
         .nav-item {
             margin: 0;
@@ -191,6 +287,38 @@ onMounted(() => {
                 }
             }
         }
+    }
+}
+
+// 从左侧滑入的关键帧动画 (桌面端)
+@keyframes slideInFromLeft {
+    0% {
+        transform: translateX(-100%);
+        opacity: 0;
+    }
+    100% {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+// 从底部滑入的关键帧动画 (移动端) - 简洁非线性动画
+@keyframes slideInFromBottom {
+    0% {
+        transform: translateY(100%);
+        opacity: 0;
+    }
+    30% {
+        transform: translateY(20%);
+        opacity: 0.6;
+    }
+    60% {
+        transform: translateY(5%);
+        opacity: 0.85;
+    }
+    100% {
+        transform: translateY(0);
+        opacity: 1;
     }
 }
 
@@ -273,6 +401,19 @@ onMounted(() => {
             justify-content: space-around;
             align-items: center;
             gap: 0;
+            
+            // 移动端动画 - 覆盖桌面端的transition，使用流畅的非线性缓动
+            transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            
+            // 移动端动画调整 - 向下滑出
+            &.slide-out {
+                transform: translateY(100%);
+                opacity: 0;
+            }
+            
+            &.slide-in {
+                animation: slideInFromBottom 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+            }
 
             .nav-item {
                 flex: 1;
