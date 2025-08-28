@@ -1,0 +1,150 @@
+:root {
+  // Primary Colors - EFB day mode (light content, dark blue navigation)
+  --primary-bg: #f0f2f5;           // Main background (light gray)
+  --secondary-bg: #ffffff;         // Secondary panels/cards (white)
+  --content-bg: #ffffff;           // Content area background
+  --nav-bg: #2c3e50;               // Navigation background (dark blue-gray)
+  --header-bg: #34495e;            // Header background (slightly lighter blue-gray)
+  
+  // Accent Colors - Aviation blue theme
+  --primary-blue: #3498db;         // Primary action color (aviation blue)
+  --secondary-blue: #2980b9;       // Secondary blue (darker)
+  --accent-cyan: #1abc9c;          // Accent cyan for highlights
+  --route-blue: #3b82f6;           // Route line color
+  --nav-accent: #4a90e2;           // Navigation accent color
+  
+  // Text Colors
+  --text-primary: #2c3e50;         // Primary text (dark blue-gray)
+  --text-secondary: #7f8c8d;       // Secondary text (medium gray)
+  --text-muted: #95a5a6;           // Muted text (light gray)
+  --text-inverse: #ffffff;         // Inverse text (white for dark backgrounds)
+  --nav-text: #ecf0f1;             // Navigation text (light)
+  --nav-text-secondary: #bdc3c7;   // Secondary navigation text
+  
+  // Status Colors
+  --success-green: #27ae60;        // Success/active states
+  --warning-yellow: #f39c12;       // Warning states
+  --error-red: #e74c3c;            // Error states
+  --info-blue: var(--primary-blue); // Info states
+  
+  // Interactive Elements
+  --hover-bg: #ecf0f1;             // Hover state background (light)
+  --active-bg: #d5dbdb;            // Active state background (light)
+  --nav-hover-bg: rgba(255, 255, 255, 0.1); // Navigation hover background
+  --nav-active-bg: rgba(255, 255, 255, 0.2); // Navigation active background
+  --selected-bg: rgba(52, 152, 219, 0.1); // Selected item background
+  --border-color: #d5dbdb;         // Border color (light)
+  --nav-border-color: #34495e;     // Navigation border color
+  --divider-color: #ecf0f1;        // Divider lines (light)
+  
+  // Glass/Transparency Effects
+  --glass-bg: rgba(255, 255, 255, 0.9); // Glass panel background (light)
+  --overlay-bg: rgba(44, 62, 80, 0.6);   // Modal overlay (dark blue)
+  
+  // Shadows
+  --shadow-light: 0 2px 4px rgba(0, 0, 0, 0.1);
+  --shadow-medium: 0 4px 12px rgba(0, 0, 0, 0.3);
+  --shadow-heavy: 0 8px 24px rgba(0, 0, 0, 0.5);
+  
+  // Border Radius
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  
+  // Spacing
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+  
+  // Typography
+  --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-size-xs: 12px;
+  --font-size-sm: 14px;
+  --font-size-md: 16px;
+  --font-size-lg: 18px;
+  --font-size-xl: 20px;
+  --font-size-2xl: 24px;
+  
+  // Navigation specific
+  --nav-width-desktop: 280px;      // Desktop navigation width
+  --nav-width-tablet: 240px;       // Tablet navigation width
+  --header-height: 48px;           // Header height
+  --bottom-nav-height: 80px;       // Mobile bottom navigation height
+  
+  // Z-index layers
+  --z-header: 1000;
+  --z-nav: 900;
+  --z-modal: 2000;
+  --z-tooltip: 3000;
+}
+
+// Night mode theme (high contrast for aviation use)
+[data-theme="night"] {
+  --primary-bg: #0d1117;           // Very dark background
+  --secondary-bg: #161b22;         // Dark panels
+  --content-bg: #0d1117;           // Dark content background
+  --nav-bg: #1c2128;               // Slightly lighter navigation
+  --header-bg: #21262d;            // Dark header
+  
+  --text-primary: #f0f6fc;         // Light text
+  --text-secondary: #8b949e;       // Medium gray text
+  --text-muted: #6e7681;           // Muted text
+  --nav-text: #f0f6fc;             // Light navigation text
+  --nav-text-secondary: #8b949e;   // Secondary navigation text
+  
+  --hover-bg: #21262d;             // Dark hover
+  --active-bg: #30363d;            // Dark active
+  --nav-hover-bg: rgba(255, 255, 255, 0.06); // Subtle navigation hover
+  --nav-active-bg: rgba(255, 255, 255, 0.12); // Navigation active
+  --border-color: #30363d;         // Dark border
+  --nav-border-color: #21262d;     // Dark navigation border
+  --divider-color: #21262d;        // Dark divider
+}
+
+// Global resets and base styles
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  font-family: var(--font-family);
+  font-size: var(--font-size-md);
+  line-height: 1.5;
+  color: var(--text-primary);
+  background-color: var(--primary-bg);
+  
+  // Set default theme to day mode
+  &:not([data-theme]) {
+    // Day mode is the default
+  }
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}
+
+// Scrollbar styling for webkit browsers
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--secondary-bg);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: var(--radius-sm);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--hover-bg);
+}

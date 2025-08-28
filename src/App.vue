@@ -1,11 +1,23 @@
-<script setup lang="ts"></script>
-
 <template>
-  <h1>You did it!</h1>
-  <p>
-    Visit <a href="https://vuejs.org/" target="_blank" rel="noopener">vuejs.org</a> to read the
-    documentation
-  </p>
+  <AppLayout />
 </template>
 
-<style scoped></style>
+<script lang='ts' setup>
+import { onMounted } from 'vue';
+import AppLayout from './layouts/AppLayout.vue';
+
+onMounted( () => {
+  const theme = localStorage.getItem('theme')
+  if (theme) {
+    document.documentElement.setAttribute('data-theme', theme)
+  }else{
+    localStorage.setItem('theme', 'light')
+    document.documentElement.setAttribute('data-theme', 'light')
+  }
+})
+
+</script>
+
+<style lang='scss' scoped>
+
+</style>
