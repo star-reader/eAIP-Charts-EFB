@@ -1,11 +1,13 @@
 <template>
     <NavBarContainer>
         <nav class="app-nav-bar">
+            <!-- 主导航列表 -->
             <ul 
+                v-show="isHome"
                 class="nav-list" 
                 :class="{ 
-                    'slide-out': !showList, 
-                    'slide-in': showList && isAnimating,
+                    'slide-out': !showList && isHome, 
+                    'slide-in': showList && isAnimating && isHome,
                     'animating': isAnimating 
                 }"
             >
@@ -21,12 +23,31 @@
                     </button>
                 </li>
             </ul>
+
+            <!-- 机场子导航 -->
+            <div
+                v-show="!isHome && currentPage === 'airports'"
+                class="sub-nav-container"
+                :class="{ 
+                    'slide-in-right': showSubNav && isAnimating,
+                    'slide-out-right': !showSubNav,
+                    'animating': isAnimating 
+                }"
+            >
+                <AirportSubNavBar 
+                    :is-mobile="isMobile"
+                    :active-item="activeSubItem"
+                    :selected-airport="selectedAirport"
+                    @go-home="goHome"
+                    @navigate="handleSubNavClick"
+                />
+            </div>
         </nav>
     </NavBarContainer>
 </template>
 
 <script lang='ts' setup>
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, markRaw } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { Icon } from '@vicons/utils'
 import {
@@ -38,6 +59,7 @@ import {
     AddCircleOutline
 } from '@vicons/ionicons5'
 import NavBarContainer from './NavBarContainer.vue'
+import AirportSubNavBar from './SubNavBar/AirportSubNavBar.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -52,6 +74,11 @@ const isHome = computed(() => currentPage.value === 'home')
 // 动画控制
 const isAnimating = ref(false)
 const showList = ref(true)
+const showSubNav = ref(false)
+
+// 子导航状态
+const activeSubItem = ref('')
+const selectedAirport = ref('ZBAA') // 默认机场
 
 const navItems = ref([
     {
@@ -97,6 +124,14 @@ const iconSize = computed(() => isMobile.value ? '24' : '20')
 const handleNavClick = (item: any) => {
     activeItem.value = item.id
     currentPage.value = item.id
+    if (item.route) {
+        router.push(item.route)
+    }
+}
+
+// 处理子导航点击
+const handleSubNavClick = (item: any) => {
+    activeSubItem.value = item.id
     if (item.route) {
         router.push(item.route)
     }
@@ -152,16 +187,22 @@ watch(isHome, (newValue, oldValue) => {
         const animationDuration = isMobile.value ? 400 : 300
         
         if (!newValue) {
-            // 进入子页面，桌面端向左滑出，移动端向下滑出
+            // 进入子页面
             showList.value = false
             
-            // 动画完成后重置状态
+            // 延迟显示子导航，创建从右侧滑入的效果
             setTimeout(() => {
-                isAnimating.value = false
-            }, animationDuration)
+                showSubNav.value = true
+                
+                // 动画完成后重置状态
+                setTimeout(() => {
+                    isAnimating.value = false
+                }, animationDuration)
+            }, animationDuration / 2) // 主导航滑出一半时显示子导航
+            
         } else {
-            // 返回首页，桌面端从左侧滑入，移动端从底部滑入
-            // 先确保列表不可见，然后触发滑入动画
+            // 返回首页
+            showSubNav.value = false
             showList.value = false
             
             setTimeout(() => {
@@ -288,6 +329,33 @@ onUnmounted(() => {
             }
         }
     }
+
+    // 子导航容器样式
+    .sub-nav-container {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: var(--nav-bg);
+        border-radius: var(--radius-md);
+        transform: translateX(100%);
+        opacity: 0;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+        &.slide-in-right {
+            animation: slideInFromRight 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+
+        &.slide-out-right {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+
+        &.animating {
+            pointer-events: none;
+        }
+    }
 }
 
 // 从左侧滑入的关键帧动画 (桌面端)
@@ -318,6 +386,18 @@ onUnmounted(() => {
     }
     100% {
         transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+// 从右侧滑入的关键帧动画 (子导航)
+@keyframes slideInFromRight {
+    0% {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    100% {
+        transform: translateX(0);
         opacity: 1;
     }
 }
@@ -437,6 +517,26 @@ onUnmounted(() => {
                         line-height: 1;
                     }
                 }
+            }
+        }
+
+        // 移动端子导航容器
+        .sub-nav-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--nav-bg);
+            border-radius: 0;
+            
+            &.slide-in-right {
+                animation: slideInFromBottom 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+            }
+
+            &.slide-out-right {
+                transform: translateY(100%);
+                opacity: 0;
             }
         }
     }

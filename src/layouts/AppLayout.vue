@@ -18,9 +18,11 @@
     >
       <div class="content-container">
         <!-- Router View for page content -->
-        <router-view v-slot="{ Component }">
+        <router-view v-slot="{ Component, route }">
           <transition name="page" mode="out-in">
-            <component :is="Component" />
+            <keep-alive>
+              <component :is="Component" :key="route.fullPath" />
+            </keep-alive>
           </transition>
         </router-view>
       </div>

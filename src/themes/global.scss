@@ -12,6 +12,7 @@
   --accent-cyan: #1abc9c;          // Accent cyan for highlights
   --route-blue: #3b82f6;           // Route line color
   --nav-accent: #4a90e2;           // Navigation accent color
+  --nav-accent-rgb: 74, 144, 226;     // Navigation accent color RGB values
   
   // Text Colors
   --text-primary: #2c3e50;         // Primary text (dark blue-gray)
@@ -98,6 +99,9 @@
   --text-muted: #6e7681;           // Muted text
   --nav-text: #f0f6fc;             // Light navigation text
   --nav-text-secondary: #8b949e;   // Secondary navigation text
+  
+  --nav-accent: #5aa3f0;           // Navigation accent color (lighter for dark mode)
+  --nav-accent-rgb: 90, 163, 240;     // Navigation accent color RGB values
   
   --hover-bg: #21262d;             // Dark hover
   --active-bg: #30363d;            // Dark active
