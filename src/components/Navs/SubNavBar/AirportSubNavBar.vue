@@ -51,14 +51,16 @@
 </template>
 
 <script lang='ts' setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { Icon } from '@vicons/utils'
+import pubsub from 'pubsub-js'
 import { 
     HomeOutline,
     LocationOutline,
     ChevronDownOutline
 } from '@vicons/ionicons5'
+import { getCategorizedChartsByICAO } from '@/services/storage/airportHelper'
 
 // Emits
 interface Emits {
@@ -84,35 +86,34 @@ const props = withDefaults(defineProps<Props>(), {
     selectedAirport: ''
 })
 
-// State
 const isAirportSelectOpen = ref(false)
+const chartsData = ref<CategorizedCharts | null>(null)
+const isLoadingCharts = ref(false)
 
 // Computed
 const iconSize = computed(() => props.isMobile ? '24' : '20')
 
-// 移除滑块相关逻辑
-
-// 机场导航项
-const airportNavItems = ref([
+// 机场导航项 - 动态更新数量
+const airportNavItems = computed(() => [
     {
         id: 'airport-chart',
         label: '机场',
-        count: 12,
+        count: chartsData.value?.airport?.length || 0,
     },
     {
         id: 'departure',
         label: '离场',
-        count: 8,
+        count: chartsData.value?.dep?.length || 0,
     },
     {
         id: 'arrival',
         label: '进场',
-        count: 6,
+        count: chartsData.value?.arr?.length || 0,
     },
     {
         id: 'approach',
         label: '进近',
-        count: 15,
+        count: chartsData.value?.app?.length || 0,
     },
     {
         id: 'details',
@@ -127,14 +128,83 @@ const goHome = () => {
 }
 
 const toggleAirportSelect = () => {
-    isAirportSelectOpen.value = !isAirportSelectOpen.value
+    // 广播打开机场选择器事件
+    pubsub.publish('show-airport-selection', {
+        selectedAirport: props.selectedAirport
+    })
 }
 
 const handleNavClick = (item: any) => {
    emit('navigate', item)
+   
+   // 如果是细则，直接输出内容到控制台
+   if (item.id === 'details') {
+     console.log('细则内容:', chartsData.value?.airport || [])
+     return
+   }
+   
+   // 其他类别输出对应的航图内容到控制台
+   const categoryData = chartsData.value?.[item.id as keyof typeof chartsData.value]
+   if (Array.isArray(categoryData)) {
+     console.log(`${item.text}内容:`, categoryData)
+   } else if (categoryData) {
+     console.log(`${item.text}内容:`, categoryData)
+   }
+   
+   // 广播显示航图选择器事件
+   pubsub.publish('show-charts-selection', {
+       category: item.id,
+       selectedAirport: props.selectedAirport
+   })
 }
 
-// 移除滑块相关监听器
+// 加载机场航图数据
+const loadAirportCharts = async (icao: string) => {
+    if (!icao) {
+        chartsData.value = null
+        return
+    }
+
+    isLoadingCharts.value = true
+    try {
+        const data = await getCategorizedChartsByICAO(icao)
+        chartsData.value = data
+    } catch (error) {
+        console.error('Failed to load airport charts:', error)
+        chartsData.value = null
+    } finally {
+        isLoadingCharts.value = false
+    }
+}
+
+// 监听机场选择事件
+const handleAirportSelected = (message: string, airport: AirportList) => {
+    loadAirportCharts(airport.airporticao)
+}
+
+// 监听机场变化
+watch(() => props.selectedAirport, (newAirport) => {
+    if (newAirport) {
+        loadAirportCharts(newAirport)
+    } else {
+        chartsData.value = null
+    }
+}, { immediate: true })
+
+onMounted(() => {
+    // 订阅机场选择事件
+    pubsub.subscribe('airport-selected', handleAirportSelected)
+    
+    // 如果已有选中的机场，加载数据
+    if (props.selectedAirport) {
+        loadAirportCharts(props.selectedAirport)
+    }
+})
+
+onUnmounted(() => {
+    // 取消订阅
+    pubsub.unsubscribe('airport-selected')
+})
 </script>
 
 <style lang='scss' scoped>
@@ -291,7 +361,7 @@ const handleNavClick = (item: any) => {
                     &:hover {
                         color: var(--nav-text);
                         background: rgba(255, 255, 255, 0.04);
-                        transform: translateY(-1px);
+                        // transform: translateY(-1px);
                     }
 
                     &.active {
@@ -340,128 +410,38 @@ const handleNavClick = (item: any) => {
     }
 }
 
-// 移动端样式调整
+// 移动端样式调整 - 保持和桌面端一致的布局
 @media (max-width: 767px) {
     .airport-sub-nav {
-        flex-direction: row;
-        height: auto;
-        padding: 4px var(--spacing-sm);
-
+        // 保持和桌面端相同的结构，只调整尺寸
         .home-section {
-            margin-bottom: 0;
-            margin-right: var(--spacing-xs);
-            padding: 0;
-            display: flex;
-            align-items: center;
-            
             .home-btn {
-                width: 36px;
-                height: 36px;
-                padding: 0;
-                display: flex;
-                align-items: center;
-                justify-content: center;
+                font-size: inherit; // 保持桌面端样式
             }
         }
 
         .airport-selector {
-            margin-bottom: 0;
-            margin-right: var(--spacing-xs);
-            flex: 0 0 auto;
-            display: flex;
-            align-items: center;
-            
             .airport-select-btn {
-                width: 36px;
-                height: 36px;
-                padding: 0;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                background: rgba(255, 255, 255, 0.1);
-                border: 1px solid rgba(255, 255, 255, 0.15);
-                border-radius: var(--radius-md);
-                min-height: unset;
-                
-                &:hover {
-                    background: rgba(255, 255, 255, 0.15);
-                    border-color: var(--nav-accent);
-                }
-                
                 .selector-content {
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    flex-direction: row;
-                    gap: 0;
-                    flex: none;
-                    
-                    .nav-icon {
-                        font-size: 18px;
-                        color: var(--nav-accent);
-                    }
-                    
                     .nav-label {
-                        display: none; // 隐藏文字
+                        font-size: 8px; // 稍微缩小字体
                     }
-                }
-                
-                .dropdown-arrow {
-                    display: none;
                 }
             }
         }
 
         .nav-section {
-            flex: 1;
-            padding: 0;
-            display: flex;
-            align-items: center;
-
             .nav-slider-container {
-                flex-direction: row;
-                gap: 2px;
-                height: 100%;
-                padding: 3px;
-                width: 100%;
-
-
-
                 .nav-item {
-                    flex: 1;
-                    display: flex;
-                    justify-content: center;
-                    align-items: center;
-
                     .nav-button {
-                        width: 100%;
-                        height: 100%;
-                        padding: 6px 3px;
-                        margin: 0;
-                        min-height: 44px;
-                        gap: 2px;
-
                         .nav-label {
-                            font-size: 12px;
-                            font-weight: 600;
-                            line-height: 1.1;
+                            font-size: 10px; // 稍微缩小字体
                         }
 
                         .nav-count {
-                            min-width: 20px;
-                            height: 18px;
-                            padding: 0 6px;
-                            font-size: 11px;
-                            border-radius: 9px;
-                        }
-                        
-                        &.active {
-                            color: #D2B48C;
-                            
-                            .nav-label {
-                                color: #D2B48C;
-                                font-weight: 700;
-                            }
+                            min-width: 18px;
+                            height: 16px;
+                            font-size: 9px;
                         }
                     }
                 }
@@ -472,75 +452,36 @@ const handleNavClick = (item: any) => {
 
 @media (max-width: 480px) {
     .airport-sub-nav {
-        .home-section {
-            display: flex;
-            align-items: center;
-            
-            .home-btn {
-                width: 32px;
-                height: 32px;
-                padding: 0;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-            }
-        }
-
+        // 在极小屏幕上进一步缩小尺寸，但保持相同的布局结构
         .airport-selector {
-            display: flex;
-            align-items: center;
-        }
-        
-        .airport-selector .airport-select-btn {
-            width: 32px;
-            height: 32px;
-            padding: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            border-radius: var(--radius-md);
-            min-height: unset;
-            
-            &:hover {
-                background: rgba(255, 255, 255, 0.15);
-                border-color: var(--nav-accent);
-            }
-            
-            .selector-content {
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                flex-direction: row;
-                gap: 0;
-                flex: none;
-                
-                .nav-icon {
-                    font-size: 16px;
-                    color: var(--nav-accent);
-                }
-                
-                .nav-label {
-                    display: none; // 隐藏文字
+            .airport-select-btn {
+                .selector-content {
+                    .nav-label {
+                        font-size: 7px; // 更小的字体
+                    }
+                    
+                    .nav-icon {
+                        font-size: inherit; // 保持图标大小
+                    }
                 }
             }
         }
 
-        .nav-section .nav-slider-container .nav-item .nav-button {
-            padding: 5px 2px;
-            gap: 1px;
-            
-            .nav-label {
-                font-size: 12px; // 确保最小12px
-                font-weight: 600;
-            }
+        .nav-section {
+            .nav-slider-container {
+                .nav-item {
+                    .nav-button {
+                        .nav-label {
+                            font-size: 9px; // 更小的字体
+                        }
 
-            .nav-count {
-                min-width: 18px;
-                height: 16px;
-                font-size: 10px;
-                padding: 0 5px;
+                        .nav-count {
+                            min-width: 16px;
+                            height: 14px;
+                            font-size: 8px;
+                        }
+                    }
+                }
             }
         }
     }

@@ -111,7 +111,6 @@ const toggleFullscreen = () => {
   z-index: var(--z-header);
   box-shadow: var(--shadow-light);
   user-select: none;
-  position: relative;
 
   .header-left {
     display: flex;

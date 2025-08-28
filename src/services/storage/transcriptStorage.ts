@@ -4,7 +4,7 @@
  */
 
 const DB_NAME = 'AIP_Database'
-const DB_VERSION = 1
+const DB_VERSION = 2  // 更新版本号以触发数据库重新创建
 
 // 数据表名称
 const STORES = {
@@ -35,52 +35,58 @@ const initDatabase = (): Promise<IDBDatabase> => {
     request.onupgradeneeded = (event) => {
       const db = (event.target as IDBOpenDBRequest).result
 
-      // 创建 AD (机场) 表
+      // 创建 AD (机场) 表 - 使用数组索引作为主键保持原始顺序
       if (!db.objectStoreNames.contains(STORES.AD)) {
-        const adStore = db.createObjectStore(STORES.AD, { keyPath: 'id' })
+        const adStore = db.createObjectStore(STORES.AD, { keyPath: '_index' })
         adStore.createIndex('airporticao', 'airporticao', { unique: false })
         adStore.createIndex('pId', 'pId', { unique: false })
+        adStore.createIndex('id', 'id', { unique: false })
       }
 
-      // 创建 ENR (航路) 表
+      // 创建 ENR (航路) 表 - 使用数组索引作为主键保持原始顺序
       if (!db.objectStoreNames.contains(STORES.ENR)) {
-        const enrStore = db.createObjectStore(STORES.ENR, { keyPath: 'id' })
+        const enrStore = db.createObjectStore(STORES.ENR, { keyPath: '_index' })
         enrStore.createIndex('airporticao', 'airporticao', { unique: false })
         enrStore.createIndex('pId', 'pId', { unique: false })
+        enrStore.createIndex('id', 'id', { unique: false })
       }
 
-      // 创建 AMDT (修订) 表
+      // 创建 AMDT (修订) 表 - 使用数组索引作为主键保持原始顺序
       if (!db.objectStoreNames.contains(STORES.AMDT)) {
-        const amdtStore = db.createObjectStore(STORES.AMDT, { keyPath: 'id' })
+        const amdtStore = db.createObjectStore(STORES.AMDT, { keyPath: '_index' })
         amdtStore.createIndex('airporticao', 'airporticao', { unique: false })
         amdtStore.createIndex('pId', 'pId', { unique: false })
+        amdtStore.createIndex('id', 'id', { unique: false })
       }
 
-      // 创建 SUP (补充) 表
+      // 创建 SUP (补充) 表 - 使用数组索引作为主键保持原始顺序
       if (!db.objectStoreNames.contains(STORES.SUP)) {
-        const supStore = db.createObjectStore(STORES.SUP, { keyPath: 'Id' })
+        const supStore = db.createObjectStore(STORES.SUP, { keyPath: '_index' })
         supStore.createIndex('CHAPTER_TYPE', 'CHAPTER_TYPE', { unique: false })
         supStore.createIndex('Serial', 'Serial', { unique: false })
+        supStore.createIndex('Id', 'Id', { unique: false })
       }
 
-      // 创建 NOTAM (航行通告) 表
+      // 创建 NOTAM (航行通告) 表 - 使用数组索引作为主键保持原始顺序
       if (!db.objectStoreNames.contains(STORES.NOTAM)) {
-        const notamStore = db.createObjectStore(STORES.NOTAM, { keyPath: 'Document' })
+        const notamStore = db.createObjectStore(STORES.NOTAM, { keyPath: '_index' })
         notamStore.createIndex('SeriesName', 'SeriesName', { unique: false })
+        notamStore.createIndex('Document', 'Document', { unique: false })
       }
 
-      // 创建 AIC (航空情报通告) 表
+      // 创建 AIC (航空情报通告) 表 - 使用数组索引作为主键保持原始顺序
       if (!db.objectStoreNames.contains(STORES.AIC)) {
-        const aicStore = db.createObjectStore(STORES.AIC, { keyPath: 'Id' })
+        const aicStore = db.createObjectStore(STORES.AIC, { keyPath: '_index' })
         aicStore.createIndex('CHAPTER_TYPE', 'CHAPTER_TYPE', { unique: false })
         aicStore.createIndex('Serial', 'Serial', { unique: false })
+        aicStore.createIndex('Id', 'Id', { unique: false })
       }
     }
   })
 }
 
 /**
- * 通用的数据读取方法
+ * 通用的数据读取方法 - 按照原始数组顺序返回
  */
 const readData = async <T>(storeName: string): Promise<T[]> => {
   const db = await initDatabase()
@@ -91,7 +97,14 @@ const readData = async <T>(storeName: string): Promise<T[]> => {
     const request = store.getAll()
 
     request.onsuccess = () => {
-      resolve(request.result)
+      // 按照 _index 排序以保持原始数组顺序
+      const results = request.result.sort((a: any, b: any) => a._index - b._index)
+      // 移除临时添加的 _index 字段
+      const cleanResults = results.map((item: any) => {
+        const { _index, ...cleanItem } = item
+        return cleanItem as T
+      })
+      resolve(cleanResults)
     }
 
     request.onerror = () => {
@@ -114,7 +127,7 @@ const writeData = async <T>(storeName: string, data: T[]): Promise<void> => {
     const clearRequest = store.clear()
     
     clearRequest.onsuccess = () => {
-      // 批量添加新数据
+      // 批量添加新数据，添加数组索引以保持原始顺序
       let completed = 0
       const total = data.length
 
@@ -123,8 +136,10 @@ const writeData = async <T>(storeName: string, data: T[]): Promise<void> => {
         return
       }
 
-      data.forEach((item) => {
-        const addRequest = store.add(item)
+      data.forEach((item, index) => {
+        // 为每个数据项添加数组索引
+        const itemWithIndex = { ...item, _index: index }
+        const addRequest = store.add(itemWithIndex)
         
         addRequest.onsuccess = () => {
           completed++

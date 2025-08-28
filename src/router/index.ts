@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import AirportView from '@/pages/AirportView.vue'
+import AirportsPage from '@/pages/AirportView.vue'
 import HomeView from '@/pages/HomeView.vue'
 
 const router = createRouter({
@@ -15,10 +16,11 @@ const router = createRouter({
     },
     {
       path: '/airports',
-      name: 'AirportView',
-      component: AirportView,
+      name: 'AirportsPage',
+      component: AirportsPage,
       meta: {
         keepAlive: true,
+        title: '机场图'
       }
     }
   ],

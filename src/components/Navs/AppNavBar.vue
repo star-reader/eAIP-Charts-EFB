@@ -50,6 +50,7 @@
 import { ref, computed, onMounted, onUnmounted, watch, markRaw } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { Icon } from '@vicons/utils'
+import pubsub from 'pubsub-js'
 import {
     AirplaneOutline,
     MapOutline,
@@ -132,6 +133,10 @@ const handleNavClick = (item: any) => {
 // 处理子导航点击
 const handleSubNavClick = (item: any) => {
     activeSubItem.value = item.id
+    
+    // 广播子导航切换事件
+    pubsub.publish('sub-nav-navigate', item)
+    
     if (item.route) {
         router.push(item.route)
     }
@@ -221,14 +226,25 @@ watch(() => currentPage.value, (newPage) => {
     }
 })
 
+// 监听机场选择事件
+const handleAirportSelected = (message: string, airport: AirportList) => {
+    selectedAirport.value = airport.airporticao
+}
+
 onMounted(() => {
     handleResize()
     // 初始化时设置当前路由状态，但不需要调用setActiveFromRoute，因为路由监听器会自动处理
     window.addEventListener('resize', handleResize)
+    
+    // 订阅机场选择事件
+    pubsub.subscribe('airport-selected', handleAirportSelected)
 })
 
 onUnmounted(() => {
     window.removeEventListener('resize', handleResize)
+    
+    // 取消订阅
+    pubsub.unsubscribe('airport-selected')
 })
 </script>
 
@@ -395,6 +411,18 @@ onUnmounted(() => {
     }
 }
 
+// 从左侧滑入的关键帧动画 (移动端主导航)
+@keyframes slideInFromLeft {
+    0% {
+        transform: translateX(-100%);
+        opacity: 0;
+    }
+    100% {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
 // 从右侧滑入的关键帧动画 (子导航)
 @keyframes slideInFromRight {
     0% {
@@ -474,52 +502,50 @@ onUnmounted(() => {
 @media (max-width: 767px) {
 
     .app-nav-bar {
-        width: 100%;
-        height: 100%;
-        background: transparent;
         border-radius: 0;
-        padding: 4px var(--spacing-sm);
-        box-shadow: none;
+        height: 100%;
 
         .nav-list {
-            flex-direction: row;
-            justify-content: space-around;
-            align-items: center;
-            gap: 0;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: stretch;
+            gap: var(--spacing-xs);
+            padding: var(--spacing-md) 0;
             
             // 移动端动画 - 覆盖桌面端的transition，使用流畅的非线性缓动
             transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
             
-            // 移动端动画调整 - 向下滑出
+            // 移动端动画调整 - 向左滑出
             &.slide-out {
-                transform: translateY(100%);
+                transform: translateX(-100%);
                 opacity: 0;
             }
             
             &.slide-in {
-                animation: slideInFromBottom 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+                animation: slideInFromLeft 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
             }
 
             .nav-item {
-                flex: 1;
+                flex: none;
                 display: flex;
                 justify-content: center;
 
                 .nav-button {
-                    min-height: auto;
+                    min-height: 45px;
                     height: auto;
-                    padding: 4px;
-                    margin: 0;
-                    max-width: 60px;
+                    padding: var(--spacing-xs);
+                    margin: 0 var(--spacing-xs);
+                    max-width: none;
+                    width: calc(100% - var(--spacing-sm));
 
                     .nav-icon {
-                        margin-bottom: 1px;
+                        margin-bottom: 2px;
                     }
 
                     .nav-label {
-                        font-size: 10px;
-                        font-weight: 600;
-                        line-height: 1.1;
+                        font-size: 9px;
+                        font-weight: 500;
+                        line-height: 1.2;
                     }
                 }
             }
@@ -527,7 +553,6 @@ onUnmounted(() => {
 
         // 移动端子导航容器
         .sub-nav-container {
-            position: absolute;
             top: 0;
             left: 0;
             width: 100%;

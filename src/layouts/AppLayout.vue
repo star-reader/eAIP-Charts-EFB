@@ -9,6 +9,8 @@
 
     <AppNavBar />
 
+
+
     <main 
       class="main-content"
       :class="{ 
@@ -52,6 +54,8 @@ const lastSyncTime = ref<Date>(new Date())
 const activeNavItem = ref('home')
 const activeSecondaryItem = ref('')
 
+
+
 // Remove breadcrumbs - not part of this design
 
 // Computed properties
@@ -69,6 +73,8 @@ const openSettings = () => {
   router.push('/settings')
 }
 
+
+
 // Responsive handling
 const handleResize = () => {
   const width = window.innerWidth
@@ -85,18 +91,24 @@ const handleOnlineStatus = () => {
   isOnline.value = navigator.onLine
 }
 
+
+
 // Lifecycle
 onMounted(() => {
   handleResize()
   window.addEventListener('resize', handleResize)
   window.addEventListener('online', handleOnlineStatus)
   window.addEventListener('offline', handleOnlineStatus)
+  
+
 })
 
 onUnmounted(() => {
   window.removeEventListener('resize', handleResize)
   window.removeEventListener('online', handleOnlineStatus)
   window.removeEventListener('offline', handleOnlineStatus)
+  
+
 })
 </script>
 
@@ -111,7 +123,7 @@ onUnmounted(() => {
 
 .main-content {
   flex: 1;
-  // margin-top: var(--header-height);
+  margin-top: var(--header-height);
   margin-left: var(--nav-width-sidebar-md); // Default medium screen navigation width
   margin-bottom: 0;
   transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -175,8 +187,8 @@ onUnmounted(() => {
 // Mobile specific styles
 @media (max-width: 767px) {
   .main-content {
-    margin-left: 0; // No left margin on mobile
-    margin-bottom: var(--bottom-nav-height); // Space for bottom navigation
+    margin-left: var(--nav-width-sidebar-sm); // Space for left navigation on mobile
+    margin-bottom: 0; // No bottom margin since nav is on left
   }
 }
 
