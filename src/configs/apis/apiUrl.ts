@@ -1,5 +1,5 @@
 export default {
-    aip_version: '/version.json',
+    aip_version: '/latest.json',
     official: {
         adConfig: '/data/Data/JsonPath/AD.JSON',
         enrouteConfig: '/data/Data/JsonPath/ENR.JSON',

@@ -222,12 +222,12 @@ const toggleFullscreen = () => {
 
     .header-center {
       .page-title {
-        font-size: var(--font-size-sm);
-        font-weight: 400;
+        font-size: var(--font-size-lg);
+        font-weight: 500;
       }
       
       .page-subtitle {
-        font-size: 10px;
+        font-size: 12px;
       }
     }
 
@@ -243,12 +243,12 @@ const toggleFullscreen = () => {
 
     .header-center {
       .page-title {
-        font-size: var(--font-size-xs);
-        font-weight: 400;
+        font-size: var(--font-size-md);
+        font-weight: 500;
       }
       
       .page-subtitle {
-        font-size: 9px;
+        font-size: 11px;
       }
     }
 

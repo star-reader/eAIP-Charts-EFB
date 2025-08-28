@@ -2,7 +2,9 @@ import axiosInstance from "@/configs/apis/axios";
 import apiUrl from "@/configs/apis/apiUrl";
 
 const getAIPVersion = async (): Promise<AIPVersion> => {
-    const res = await axiosInstance.get(apiUrl.aip_version)
+    const res = await axiosInstance.get(apiUrl.aip_version, {
+        params: {'date': new Date().toISOString().slice(0, 10)}
+    })
     return res.data
 }
 
