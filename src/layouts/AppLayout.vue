@@ -109,7 +109,7 @@ onUnmounted(() => {
 
 .main-content {
   flex: 1;
-  margin-top: var(--header-height);
+  // margin-top: var(--header-height);
   margin-left: var(--nav-width-sidebar-md); // Default medium screen navigation width
   margin-bottom: 0;
   transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);

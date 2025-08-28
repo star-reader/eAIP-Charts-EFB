@@ -100,7 +100,6 @@ const toggleFullscreen = () => {
 .app-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   height: var(--header-height);
   background: var(--nav-bg);
   border-bottom: 1px solid var(--nav-border-color);
@@ -112,6 +111,7 @@ const toggleFullscreen = () => {
   z-index: var(--z-header);
   box-shadow: var(--shadow-light);
   user-select: none;
+  position: relative;
 
   .header-left {
     display: flex;
@@ -142,28 +142,32 @@ const toggleFullscreen = () => {
   }
 
   .header-center {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
     display: flex;
     flex-direction: column;
     align-items: center;
     text-align: center;
-    flex: 1;
-    min-width: 0;
+    white-space: nowrap;
 
     .page-title {
-      font-size: var(--font-size-lg);
-      font-weight: 500;
+      font-size: var(--font-size-md);
+      font-weight: 400;
       color: var(--text-inverse);
       margin: 0;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      max-width: 100%;
     }
 
     .page-subtitle {
-      font-size: var(--font-size-sm);
+      font-size: var(--font-size-xs);
+      font-weight: 300;
       color: var(--nav-text-secondary);
-      margin-top: 2px;
+      margin-top: 1px;
+      white-space: nowrap;
     }
   }
 
@@ -171,7 +175,8 @@ const toggleFullscreen = () => {
     display: flex;
     align-items: center;
     gap: var(--spacing-sm);
-    flex: 0 0 auto;
+    margin-left: auto;
+    z-index: 1;
 
     .action-btn {
       display: flex;
@@ -217,17 +222,17 @@ const toggleFullscreen = () => {
 
     .header-center {
       .page-title {
-        font-size: var(--font-size-lg);
+        font-size: var(--font-size-sm);
+        font-weight: 400;
+      }
+      
+      .page-subtitle {
+        font-size: 10px;
       }
     }
 
     .header-right {
       gap: var(--spacing-xs);
-
-      // .action-btn {
-      //   width: 40px;
-      //   height: 40px;
-      // }
     }
   }
 }
@@ -238,7 +243,12 @@ const toggleFullscreen = () => {
 
     .header-center {
       .page-title {
-        font-size: var(--font-size-md);
+        font-size: var(--font-size-xs);
+        font-weight: 400;
+      }
+      
+      .page-subtitle {
+        font-size: 9px;
       }
     }
 

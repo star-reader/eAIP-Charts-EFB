@@ -38,6 +38,10 @@ const route = useRoute()
 const activeItem = ref('home')
 const isMobile = ref(false)
 
+// 从首页到点击到其他页面的导航，有动画和具体内容切换
+const currentPage = ref('home')
+const isHome = ref(currentPage.value === 'home')
+
 const navItems = ref([
     {
         id: 'airports',
