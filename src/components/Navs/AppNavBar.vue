@@ -79,7 +79,7 @@ const showSubNav = ref(false)
 
 // 子导航状态
 const activeSubItem = ref('')
-const selectedAirport = ref('ZBAA') // 默认机场
+const selectedAirport = ref('') // 默认机场
 
 const navItems = ref([
     {

@@ -25,13 +25,7 @@
       <!-- 机场信息 -->
       <div v-if="selectedAirport" class="airport-info-section">
         <div class="airport-name">
-          {{ selectedAirport.airporticao }} - {{ selectedAirport.name_cn }}
-          <span v-if="selectedAirport.Is_Modified === 'Y'" class="updated-badge">
-            <Icon size="10">
-              <FlashOutline />
-            </Icon>
-            已更新
-          </span>
+          {{ selectedAirport.name_cn }}
         </div>
       </div>
 
@@ -301,22 +295,26 @@ defineExpose({
   &.desktop {
     position: fixed;
     top: var(--header-height);
-    left: calc(var(--nav-width-sidebar-md) + var(--spacing-lg));
+    //left: calc(var(--nav-width-sidebar-md) + var(--spacing-lg));
+    left: var(--nav-width-sidebar-md);
     width: 360px;
     height: calc(100vh - var(--header-height) - 40px);
     margin: var(--spacing-lg) 0;
     
     @media (min-width: 1920px) {
-      left: calc(var(--nav-width-sidebar-xl) + var(--spacing-lg));
+      // left: calc(var(--nav-width-sidebar-xl) + var(--spacing-lg));
+      left: var(--nav-width-sidebar-xl);
     }
     
     @media (min-width: 1440px) and (max-width: 1919px) {
-      left: calc(var(--nav-width-sidebar-lg) + var(--spacing-lg));
+      // left: calc(var(--nav-width-sidebar-lg) + var(--spacing-lg));
+      left: var(--nav-width-sidebar-lg);
     }
     
     @media (min-width: 768px) and (max-width: 1023px) {
-      left: calc(var(--nav-width-sidebar-sm) + var(--spacing-lg));
+      // left: calc(var(--nav-width-sidebar-sm) + var(--spacing-lg));
       width: 320px;
+      left: var(--nav-width-sidebar-sm);
     }
   }
 
@@ -463,10 +461,11 @@ defineExpose({
         align-items: center;
         padding: var(--spacing-sm) var(--spacing-lg);
         margin: 0 var(--spacing-sm);
-        border-radius: var(--radius-md);
+        // border-radius: var(--radius-md);
         cursor: pointer;
         transition: all 0.2s ease;
         border: 2px solid transparent;
+        border-bottom: 1px solid rgba(0,0,0,0.04);
 
         &:hover {
           background: var(--hover-bg);

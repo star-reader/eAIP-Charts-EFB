@@ -321,21 +321,25 @@ defineExpose({
   &.desktop {
     position: fixed;
     top: var(--header-height);
-    left: calc(var(--nav-width-sidebar-md) + var(--spacing-lg));
+    // left: calc(var(--nav-width-sidebar-md) + var(--spacing-lg));
+    left: var(--nav-width-sidebar-md);
     width: 360px;
     height: calc(100vh - var(--header-height) - 40px);
     margin: var(--spacing-lg) 0;
     
     @media (min-width: 1920px) {
-      left: calc(var(--nav-width-sidebar-xl) + var(--spacing-lg));
+      // left: calc(var(--nav-width-sidebar-xl) + var(--spacing-lg));
+      left: var(--nav-width-sidebar-xl);
     }
     
     @media (min-width: 1440px) and (max-width: 1919px) {
-      left: calc(var(--nav-width-sidebar-lg) + var(--spacing-lg));
+      // left: calc(var(--nav-width-sidebar-lg) + var(--spacing-lg));
+      left: var(--nav-width-sidebar-lg);
     }
     
     @media (min-width: 768px) and (max-width: 1023px) {
-      left: calc(var(--nav-width-sidebar-sm) + var(--spacing-lg));
+      // left: calc(var(--nav-width-sidebar-sm) + var(--spacing-lg));
+      left: var(--nav-width-sidebar-sm);
       width: 320px;
     }
   }
