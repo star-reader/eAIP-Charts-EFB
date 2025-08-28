@@ -85,3 +85,12 @@ type AirportList = {
     "name_cn": string,
     "Is_Modified": string,
 }
+
+// 按类别整理的航图结构
+type CategorizedCharts = {
+    ad: OfficialAD | null, // AD信息图（只有一个PDF文件）
+    airport: OfficialAD[], // 机场图
+    dep: OfficialAD[],     // 离场图 (7开头)
+    arr: OfficialAD[],     // 进场图 (9开头)
+    app: OfficialAD[]      // 进近图 (10和20开头)
+}
