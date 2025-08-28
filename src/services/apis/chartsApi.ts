@@ -31,7 +31,11 @@ const getOfficialNOTAM = async (): Promise<OfficialNOTAM[]> => {
     return axiosInstance.get(apiUrl.official.notamConfig)
 }
 
+const getOfficialAIC = async (): Promise<OfficialAIC[]> => {
+    return axiosInstance.get(apiUrl.official.aicConfig)
+}
+
 export { getOfficialAD, getOfficialENR, 
     getOfficialAMDT, getOfficialSUP, 
-    getOfficialNOTAM 
+    getOfficialNOTAM, getOfficialAIC
 }

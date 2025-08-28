@@ -65,3 +65,16 @@ type OfficialNOTAM = {
     "GenerateTime": string,
     "GenerateTime_En": string
 }
+
+type OfficialAIC = {
+    "Id": string,
+    "Document": string,
+    "CHAPTER_TYPE": string,
+    "Serial": string,
+    "Subject": string,
+    "Local_Subject": string,
+    "IS_MODIFIED": string,
+    "Effective_Time": string,
+    "Out_Date": string,
+    "Pub_Date": string
+}
