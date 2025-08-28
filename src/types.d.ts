@@ -78,3 +78,10 @@ type OfficialAIC = {
     "Out_Date": string,
     "Pub_Date": string
 }
+
+// 查询后的airports list结构
+type AirportList = {
+    "airporticao": string,
+    "name_cn": string,
+    "Is_Modified": string,
+}
