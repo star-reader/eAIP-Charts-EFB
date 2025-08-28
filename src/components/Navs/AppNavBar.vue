@@ -26,7 +26,7 @@
 
             <!-- 机场子导航 -->
             <div
-                v-show="currentPage === 'airports' && !isHome"
+                v-show="currentPage === 'airports'"
                 class="sub-nav-container"
                 :class="{ 
                     'slide-in-right': showSubNav,
@@ -153,16 +153,6 @@ const handleResize = () => {
     isMobile.value = window.innerWidth < 768
 }
 
-const setActiveFromRoute = () => {
-    const path = route.path
-    const foundItem = navItems.value.find(item =>
-        item.route === path || (item.route !== '/' && path.startsWith(item.route))
-    )
-    if (foundItem) {
-        activeItem.value = foundItem.id
-    }
-}
-
 // 监听路由变化，自动更新当前页面状态
 watch(() => route.path, (newPath) => {
     const foundItem = navItems.value.find(item => 
@@ -187,23 +177,31 @@ watch(isHome, (newValue, oldValue) => {
         const animationDuration = isMobile.value ? 400 : 300
         
         if (!newValue) {
-            // 进入子页面
+            // 进入子页面 - 主导航滑出，子导航滑入
             showList.value = false
             
-            // 立即显示子导航
+            // 延迟显示子导航，创建流畅的过渡
             setTimeout(() => {
-                showSubNav.value = true
+                if (currentPage.value === 'airports') {
+                    showSubNav.value = true
+                }
+            }, animationDuration * 0.6) // 主导航滑出60%时开始显示子导航
+            
+            setTimeout(() => {
                 isAnimating.value = false
             }, animationDuration)
             
         } else {
-            // 返回首页
+            // 返回首页 - 子导航滑出，主导航滑入
             showSubNav.value = false
             
             setTimeout(() => {
                 showList.value = true
+            }, 100) // 稍微延迟让子导航先开始滑出
+            
+            setTimeout(() => {
                 isAnimating.value = false
-            }, 50)
+            }, animationDuration)
         }
     }
 })
@@ -252,7 +250,7 @@ onUnmounted(() => {
         flex-direction: column;
         align-items: center;
         height: 100%;
-        gap: var(--spacing-xs);
+        gap: var(--spacing-md);
         justify-content: center;
         
         // 动画相关样式
@@ -345,8 +343,8 @@ onUnmounted(() => {
         height: 100%;
         background: var(--nav-bg);
         border-radius: var(--radius-md);
-        opacity: 1;
-        transform: translateX(0);
+        opacity: 0;
+        transform: translateX(100%);
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
         &.slide-in-right {
@@ -519,9 +517,9 @@ onUnmounted(() => {
                     }
 
                     .nav-label {
-                        font-size: 8px;
+                        font-size: 10px;
                         font-weight: 600;
-                        line-height: 1;
+                        line-height: 1.1;
                     }
                 }
             }
@@ -560,7 +558,7 @@ onUnmounted(() => {
                     max-width: 50px;
 
                     .nav-label {
-                        font-size: 7px;
+                        font-size: 9px;
                     }
                 }
             }

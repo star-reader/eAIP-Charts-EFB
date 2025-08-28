@@ -8,51 +8,41 @@
                         <HomeOutline />
                     </Icon>
                 </span>
-                <span class="nav-label">主页</span>
             </button>
         </div>
 
         <!-- 机场选择下拉 -->
         <div class="airport-selector">
             <button class="airport-select-btn" @click="toggleAirportSelect" aria-label="选择机场">
-                <span class="nav-icon">
-                    <Icon :size="iconSize">
-                        <LocationOutline />
-                    </Icon>
-                </span>
-                <span class="nav-label">{{ selectedAirport || '选择机场' }}</span>
-                <span class="dropdown-arrow">
-                    <Icon size="12">
-                        <ChevronDownOutline />
-                    </Icon>
-                </span>
+                <div class="selector-content">
+                    <span class="nav-icon">
+                        <Icon :size="iconSize">
+                            <LocationOutline />
+                        </Icon>
+                    </span>
+                    <span class="nav-label">{{ selectedAirport || '选择机场' }}</span>
+                </div>
             </button>
         </div>
 
         <!-- 机场导航项 -->
         <div class="nav-section">
             <div class="nav-slider-container">
-                <!-- 滑块背景 -->
-                <div 
-                    class="nav-slider" 
-                    :style="sliderStyle"
-                    :class="{ 'show': activeItem && activeItem !== '' }"
-                ></div>
-                
                 <!-- 导航按钮 -->
                 <div 
                     v-for="(item, index) in airportNavItems" 
                     :key="item.id" 
                     class="nav-item"
-                    :ref="el => setNavItemRef(el as HTMLElement, index)"
                 >
                     <button 
                         class="nav-button" 
                         :class="{ 'active': activeItem === item.id }"
                         @click="handleNavClick(item)" 
                         :aria-label="item.label"
+
                     >
                         <span class="nav-label">{{ item.label }}</span>
+                        <span v-if="item.count !== null" class="nav-count">{{ item.count }}</span>
                     </button>
                 </div>
             </div>
@@ -61,7 +51,7 @@
 </template>
 
 <script lang='ts' setup>
-import { ref, computed, nextTick, watch, onMounted } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { Icon } from '@vicons/utils'
 import { 
@@ -96,84 +86,38 @@ const props = withDefaults(defineProps<Props>(), {
 
 // State
 const isAirportSelectOpen = ref(false)
-const navItemRefs = ref<(HTMLElement | null)[]>([])
 
 // Computed
 const iconSize = computed(() => props.isMobile ? '24' : '20')
 
-// 滑块样式状态
-const sliderStyle = ref<Record<string, string>>({ transform: 'translateY(-100%)', opacity: '0' })
-
-// 计算滑块位置
-const updateSliderPosition = async () => {
-    if (!props.activeItem) {
-        sliderStyle.value = { transform: 'translateY(-100%)', opacity: '0' }
-        return
-    }
-    
-    await nextTick()
-    
-    const activeIndex = airportNavItems.value.findIndex(item => item.id === props.activeItem)
-    if (activeIndex === -1) {
-        sliderStyle.value = { transform: 'translateY(-100%)', opacity: '0' }
-        return
-    }
-    
-    const navItem = navItemRefs.value[activeIndex]
-    if (!navItem) {
-        sliderStyle.value = { transform: 'translateY(-100%)', opacity: '0' }
-        return
-    }
-    
-    const itemHeight = navItem.offsetHeight
-    const itemTop = navItem.offsetTop
-    
-    if (props.isMobile) {
-        // 移动端水平滑动
-        const itemWidth = navItem.offsetWidth
-        const itemLeft = navItem.offsetLeft
-        sliderStyle.value = {
-            transform: `translateX(${itemLeft}px)`,
-            width: `${itemWidth}px`,
-            height: `${itemHeight}px`,
-            opacity: '1'
-        }
-    } else {
-        // 桌面端垂直滑动
-        sliderStyle.value = {
-            transform: `translateY(${itemTop}px)`,
-            height: `${itemHeight}px`,
-            opacity: '1'
-        }
-    }
-}
+// 移除滑块相关逻辑
 
 // 机场导航项
 const airportNavItems = ref([
     {
         id: 'airport-chart',
         label: '机场',
-        route: '/airports/chart'
+        count: 12,
     },
     {
         id: 'departure',
         label: '离场',
-        route: '/airports/departure'
+        count: 8,
     },
     {
         id: 'arrival',
         label: '进场',
-        route: '/airports/arrival'
+        count: 6,
     },
     {
         id: 'approach',
         label: '进近',
-        route: '/airports/approach'
+        count: 15,
     },
     {
-        id: 'other',
-        label: '其他',
-        route: '/airports/other'
+        id: 'details',
+        label: '细则',
+        count: null, // 无数量显示
     }
 ])
 
@@ -187,134 +131,127 @@ const toggleAirportSelect = () => {
 }
 
 const handleNavClick = (item: any) => {
-    emit('navigate', item)
-    if (item.route) {
-        router.push(item.route)
-    }
+   // emit('navigate', item)
 }
 
-// 设置导航项ref
-const setNavItemRef = (el: HTMLElement | null, index: number) => {
-    if (el) {
-        navItemRefs.value[index] = el
-    }
-}
-
-// 监听activeItem变化
-watch(() => props.activeItem, () => {
-    if (navItemRefs.value.length > 0) {
-        updateSliderPosition()
-    }
-})
-
-// 监听isMobile变化
-watch(() => props.isMobile, () => {
-    if (navItemRefs.value.length > 0) {
-        updateSliderPosition()
-    }
-})
-
-// 组件挂载后初始化滑块位置
-onMounted(() => {
-    nextTick(() => {
-        if (props.activeItem && navItemRefs.value.length > 0) {
-            updateSliderPosition()
-        }
-    })
-})
+// 移除滑块相关监听器
 </script>
 
 <style lang='scss' scoped>
 .airport-sub-nav {
     display: flex;
     flex-direction: column;
+    justify-content: center;
     height: 100%;
     padding: var(--spacing-sm) 0;
+    align-items: center;
 
     .home-section {
         padding: 0 var(--spacing-sm);
         margin-bottom: var(--spacing-md);
+        display: flex;
+        justify-content: center;
 
         .home-btn {
             width: 100%;
             display: flex;
-            flex-direction: column;
             align-items: center;
             justify-content: center;
-            padding: var(--spacing-sm);
+            padding: 8px;
             background: rgba(255, 255, 255, 0.1);
-            border: 1px solid var(--nav-border-color);
+            border: 1px solid rgba(255, 255, 255, 0.15);
             border-radius: var(--radius-md);
             color: var(--nav-text);
             cursor: pointer;
             transition: all 0.2s ease;
-            min-height: 50px;
 
             &:hover {
-                background: var(--nav-hover-bg);
+                background: rgba(255, 255, 255, 0.15);
                 border-color: var(--nav-accent);
+                color: var(--nav-accent);
             }
 
             .nav-icon {
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                margin-bottom: 4px;
-            }
-
-            .nav-label {
-                font-size: 10px;
-                font-weight: 500;
-                text-align: center;
-                line-height: 1.1;
             }
         }
     }
 
     .airport-selector {
         padding: 0 var(--spacing-sm);
-        margin-bottom: var(--spacing-lg);
+        margin-bottom: var(--spacing-md);
 
         .airport-select-btn {
             width: 100%;
             display: flex;
             align-items: center;
-            padding: var(--spacing-sm);
-            background: var(--glass-bg);
-            border: 1px solid var(--border-color);
+            justify-content: center;
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: var(--radius-md);
-            color: var(--nav-text-secondary);
+            color: var(--nav-text);
             cursor: pointer;
             transition: all 0.2s ease;
-            min-height: 40px;
+            min-height: 38px;
 
             &:hover {
-                background: var(--nav-hover-bg);
-                border-color: var(--nav-accent);
-                color: var(--nav-text);
+                background: rgba(255, 255, 255, 0.12);
+                border-color: rgba(255, 255, 255, 0.2);
             }
 
-            .nav-icon {
-                margin-right: var(--spacing-xs);
+            &:active {
+                transform: translateY(0);
             }
 
-            .nav-label {
+            .selector-content {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 2px;
                 flex: 1;
-                font-size: 10px;
-                font-weight: 500;
-                text-align: left;
+
+                .nav-icon {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    color: var(--nav-accent);
+                }
+
+                .nav-label {
+                    font-size: 9px;
+                    font-weight: 600;
+                    text-align: center;
+                    letter-spacing: 0.3px;
+                    color: var(--nav-text);
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    max-width: 100%;
+                }
             }
 
             .dropdown-arrow {
-                margin-left: var(--spacing-xs);
-                transition: transform 0.2s ease;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex-shrink: 0;
+                color: var(--nav-text-secondary);
+                transition: all 0.2s ease;
+                
+                &:hover {
+                    color: var(--nav-accent);
+                }
             }
         }
     }
 
     .nav-section {
-        flex: 1;
-        padding: 0 var(--spacing-sm);
+        // flex: 1;
+        // padding: 0 var(--spacing-sm);
+        padding: 0px;
         display: flex;
         flex-direction: column;
         justify-content: center;
@@ -323,25 +260,11 @@ onMounted(() => {
             position: relative;
             display: flex;
             flex-direction: column;
-            gap: var(--spacing-xs);
+            gap: 4px;
+            border-radius: 4px;
+            // padding: 6px;
 
-            .nav-slider {
-                position: absolute;
-                top: 0;
-                left: 0;
-                width: 100%;
-                background: linear-gradient(135deg, var(--nav-accent), rgba(var(--nav-accent-rgb), 0.8));
-                border-radius: var(--radius-sm);
-                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                transform: translateY(-100%);
-                opacity: 0;
-                z-index: 1;
-                box-shadow: 0 2px 8px rgba(var(--nav-accent-rgb), 0.3);
 
-                &.show {
-                    opacity: 1;
-                }
-            }
 
             .nav-item {
                 position: relative;
@@ -351,38 +274,65 @@ onMounted(() => {
                 .nav-button {
                     width: 100%;
                     display: flex;
+                    flex-direction: column;
                     align-items: center;
                     justify-content: center;
-                    padding: var(--spacing-sm);
+                    padding: 14px 8px;
                     background: transparent;
                     border: none;
                     border-radius: var(--radius-sm);
                     color: var(--nav-text-secondary);
                     cursor: pointer;
-                    transition: all 0.2s ease;
-                    min-height: 45px;
+                    transition: all 0.3s ease;
+                    min-height: 60px;
                     position: relative;
+                    gap: 4px;
 
                     &:hover {
                         color: var(--nav-text);
-                        background: rgba(255, 255, 255, 0.05);
+                        background: rgba(255, 255, 255, 0.04);
+                        transform: translateY(-1px);
                     }
 
                     &.active {
-                        color: var(--nav-bg);
+                        color: #D2B48C;
                         font-weight: 600;
                         
                         .nav-label {
-                            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+                            color: #D2B48C;
+                            font-weight: 600;
                         }
+
+                       
                     }
 
                     .nav-label {
-                        font-size: 11px;
+                        font-size: 12px;
                         font-weight: 500;
                         text-align: center;
                         line-height: 1.2;
-                        transition: all 0.2s ease;
+                        transition: all 0.3s ease;
+                        letter-spacing: 0.3px;
+                        white-space: nowrap;
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                        max-width: 100%;
+                    }
+
+                    .nav-count {
+                        display: inline-flex;
+                        align-items: center;
+                        justify-content: center;
+                        min-width: 22px;
+                        height: 18px;
+                        padding: 0 6px;
+                        background: rgba(255, 255, 255, 0.12);
+                        border-radius: 9px;
+                        font-size: 10px;
+                        font-weight: 600;
+                        color: var(--nav-text-secondary);
+                        transition: all 0.3s ease;
+                        border: 1px solid rgba(255, 255, 255, 0.08);
                     }
                 }
             }
@@ -399,31 +349,65 @@ onMounted(() => {
 
         .home-section {
             margin-bottom: 0;
-            margin-right: var(--spacing-sm);
+            margin-right: var(--spacing-xs);
+            padding: 0;
+            display: flex;
+            align-items: center;
             
             .home-btn {
-                min-height: auto;
-                padding: 4px;
-                max-width: 50px;
-                
-                .nav-label {
-                    font-size: 8px;
-                }
+                width: 36px;
+                height: 36px;
+                padding: 0;
+                display: flex;
+                align-items: center;
+                justify-content: center;
             }
         }
 
         .airport-selector {
             margin-bottom: 0;
-            margin-right: var(--spacing-sm);
+            margin-right: var(--spacing-xs);
             flex: 0 0 auto;
+            display: flex;
+            align-items: center;
             
             .airport-select-btn {
-                min-height: auto;
-                padding: 4px var(--spacing-xs);
-                max-width: 80px;
+                width: 36px;
+                height: 36px;
+                padding: 0;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background: rgba(255, 255, 255, 0.1);
+                border: 1px solid rgba(255, 255, 255, 0.15);
+                border-radius: var(--radius-md);
+                min-height: unset;
                 
-                .nav-label {
-                    font-size: 7px;
+                &:hover {
+                    background: rgba(255, 255, 255, 0.15);
+                    border-color: var(--nav-accent);
+                }
+                
+                .selector-content {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    flex-direction: row;
+                    gap: 0;
+                    flex: none;
+                    
+                    .nav-icon {
+                        font-size: 18px;
+                        color: var(--nav-accent);
+                    }
+                    
+                    .nav-label {
+                        display: none; // 隐藏文字
+                    }
+                }
+                
+                .dropdown-arrow {
+                    display: none;
                 }
             }
         }
@@ -431,23 +415,17 @@ onMounted(() => {
         .nav-section {
             flex: 1;
             padding: 0;
+            display: flex;
+            align-items: center;
 
             .nav-slider-container {
                 flex-direction: row;
-                gap: 0;
+                gap: 2px;
                 height: 100%;
+                padding: 3px;
+                width: 100%;
 
-                .nav-slider {
-                    top: 0;
-                    left: 0;
-                    height: 100%;
-                    width: auto;
-                    transform: translateX(-100%);
-                    
-                    &.show {
-                        transform: translateX(0);
-                    }
-                }
+
 
                 .nav-item {
                     flex: 1;
@@ -456,21 +434,32 @@ onMounted(() => {
                     align-items: center;
 
                     .nav-button {
-                        min-height: auto;
-                        height: auto;
-                        padding: 4px;
+                        width: 100%;
+                        height: 100%;
+                        padding: 6px 3px;
                         margin: 0;
-                        max-width: 60px;
-                        min-height: 42px;
+                        min-height: 44px;
+                        gap: 2px;
 
                         .nav-label {
-                            font-size: 8px;
+                            font-size: 12px;
                             font-weight: 600;
-                            line-height: 1;
+                            line-height: 1.1;
+                        }
+
+                        .nav-count {
+                            min-width: 20px;
+                            height: 18px;
+                            padding: 0 6px;
+                            font-size: 11px;
+                            border-radius: 9px;
                         }
                         
                         &.active {
+                            color: #D2B48C;
+                            
                             .nav-label {
+                                color: #D2B48C;
                                 font-weight: 700;
                             }
                         }
@@ -483,24 +472,75 @@ onMounted(() => {
 
 @media (max-width: 480px) {
     .airport-sub-nav {
-        .home-section .home-btn {
-            max-width: 45px;
-            .nav-label {
-                font-size: 7px;
+        .home-section {
+            display: flex;
+            align-items: center;
+            
+            .home-btn {
+                width: 32px;
+                height: 32px;
+                padding: 0;
+                display: flex;
+                align-items: center;
+                justify-content: center;
             }
         }
 
+        .airport-selector {
+            display: flex;
+            align-items: center;
+        }
+        
         .airport-selector .airport-select-btn {
-            max-width: 70px;
-            .nav-label {
-                font-size: 6px;
+            width: 32px;
+            height: 32px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: var(--radius-md);
+            min-height: unset;
+            
+            &:hover {
+                background: rgba(255, 255, 255, 0.15);
+                border-color: var(--nav-accent);
+            }
+            
+            .selector-content {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex-direction: row;
+                gap: 0;
+                flex: none;
+                
+                .nav-icon {
+                    font-size: 16px;
+                    color: var(--nav-accent);
+                }
+                
+                .nav-label {
+                    display: none; // 隐藏文字
+                }
             }
         }
 
         .nav-section .nav-slider-container .nav-item .nav-button {
-            max-width: 50px;
+            padding: 5px 2px;
+            gap: 1px;
+            
             .nav-label {
-                font-size: 7px;
+                font-size: 12px; // 确保最小12px
+                font-weight: 600;
+            }
+
+            .nav-count {
+                min-width: 18px;
+                height: 16px;
+                font-size: 10px;
+                padding: 0 5px;
             }
         }
     }
