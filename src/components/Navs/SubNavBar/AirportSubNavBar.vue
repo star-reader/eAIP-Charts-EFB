@@ -61,7 +61,7 @@
 </template>
 
 <script lang='ts' setup>
-import { ref, computed } from 'vue'
+import { ref, computed, nextTick, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { Icon } from '@vicons/utils'
 import { 
@@ -101,15 +101,29 @@ const navItemRefs = ref<(HTMLElement | null)[]>([])
 // Computed
 const iconSize = computed(() => props.isMobile ? '24' : '20')
 
-// 滑块样式计算
-const sliderStyle = computed(() => {
-    if (!props.activeItem) return { transform: 'translateY(-100%)', opacity: '0' }
+// 滑块样式状态
+const sliderStyle = ref<Record<string, string>>({ transform: 'translateY(-100%)', opacity: '0' })
+
+// 计算滑块位置
+const updateSliderPosition = async () => {
+    if (!props.activeItem) {
+        sliderStyle.value = { transform: 'translateY(-100%)', opacity: '0' }
+        return
+    }
+    
+    await nextTick()
     
     const activeIndex = airportNavItems.value.findIndex(item => item.id === props.activeItem)
-    if (activeIndex === -1) return { transform: 'translateY(-100%)', opacity: '0' }
+    if (activeIndex === -1) {
+        sliderStyle.value = { transform: 'translateY(-100%)', opacity: '0' }
+        return
+    }
     
     const navItem = navItemRefs.value[activeIndex]
-    if (!navItem) return { transform: 'translateY(-100%)', opacity: '0' }
+    if (!navItem) {
+        sliderStyle.value = { transform: 'translateY(-100%)', opacity: '0' }
+        return
+    }
     
     const itemHeight = navItem.offsetHeight
     const itemTop = navItem.offsetTop
@@ -118,7 +132,7 @@ const sliderStyle = computed(() => {
         // 移动端水平滑动
         const itemWidth = navItem.offsetWidth
         const itemLeft = navItem.offsetLeft
-        return {
+        sliderStyle.value = {
             transform: `translateX(${itemLeft}px)`,
             width: `${itemWidth}px`,
             height: `${itemHeight}px`,
@@ -126,13 +140,13 @@ const sliderStyle = computed(() => {
         }
     } else {
         // 桌面端垂直滑动
-        return {
+        sliderStyle.value = {
             transform: `translateY(${itemTop}px)`,
             height: `${itemHeight}px`,
             opacity: '1'
         }
     }
-})
+}
 
 // 机场导航项
 const airportNavItems = ref([
@@ -185,6 +199,29 @@ const setNavItemRef = (el: HTMLElement | null, index: number) => {
         navItemRefs.value[index] = el
     }
 }
+
+// 监听activeItem变化
+watch(() => props.activeItem, () => {
+    if (navItemRefs.value.length > 0) {
+        updateSliderPosition()
+    }
+})
+
+// 监听isMobile变化
+watch(() => props.isMobile, () => {
+    if (navItemRefs.value.length > 0) {
+        updateSliderPosition()
+    }
+})
+
+// 组件挂载后初始化滑块位置
+onMounted(() => {
+    nextTick(() => {
+        if (props.activeItem && navItemRefs.value.length > 0) {
+            updateSliderPosition()
+        }
+    })
+})
 </script>
 
 <style lang='scss' scoped>
@@ -460,7 +497,7 @@ const setNavItemRef = (el: HTMLElement | null, index: number) => {
             }
         }
 
-        .nav-list .nav-item .nav-button {
+        .nav-section .nav-slider-container .nav-item .nav-button {
             max-width: 50px;
             .nav-label {
                 font-size: 7px;

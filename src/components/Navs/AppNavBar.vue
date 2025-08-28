@@ -26,10 +26,10 @@
 
             <!-- 机场子导航 -->
             <div
-                v-show="!isHome && currentPage === 'airports'"
+                v-show="currentPage === 'airports' && !isHome"
                 class="sub-nav-container"
                 :class="{ 
-                    'slide-in-right': showSubNav && isAnimating,
+                    'slide-in-right': showSubNav,
                     'slide-out-right': !showSubNav,
                     'animating': isAnimating 
                 }"
@@ -84,37 +84,37 @@ const navItems = ref([
     {
         id: 'airports',
         label: '机场图',
-        icon: AirplaneOutline,
+        icon: markRaw(AirplaneOutline),
         route: '/airports'
     },
     {
         id: 'enroute',
         label: '航路图',
-        icon: MapOutline,
+        icon: markRaw(MapOutline),
         route: '/enroute'
     },
     {
         id: 'amdt',
         label: 'AMDT',
-        icon: BookmarkOutline,
+        icon: markRaw(BookmarkOutline),
         route: '/amdt'
     },
     {
         id: 'sup',
         label: 'SUP',
-        icon: AddCircleOutline,
+        icon: markRaw(AddCircleOutline),
         route: '/sup'
     },
     {
         id: 'aic',
         label: 'AIC',
-        icon: FlashOutline,
+        icon: markRaw(FlashOutline),
         route: '/aic'
     },
     {
         id: 'notam',
         label: 'NOTAM',
-        icon: DocumentTextOutline,
+        icon: markRaw(DocumentTextOutline),
         route: '/notam'
     }
 ])
@@ -190,30 +190,36 @@ watch(isHome, (newValue, oldValue) => {
             // 进入子页面
             showList.value = false
             
-            // 延迟显示子导航，创建从右侧滑入的效果
+            // 立即显示子导航
             setTimeout(() => {
                 showSubNav.value = true
-                
-                // 动画完成后重置状态
-                setTimeout(() => {
-                    isAnimating.value = false
-                }, animationDuration)
-            }, animationDuration / 2) // 主导航滑出一半时显示子导航
+                isAnimating.value = false
+            }, animationDuration)
             
         } else {
             // 返回首页
             showSubNav.value = false
-            showList.value = false
             
             setTimeout(() => {
                 showList.value = true
-                
-                // 动画完成后重置状态
-                setTimeout(() => {
-                    isAnimating.value = false
-                }, animationDuration)
-            }, 50) // 小延迟确保动画正确触发
+                isAnimating.value = false
+            }, 50)
         }
+    }
+})
+
+// 监听currentPage变化，确保进入airports时显示子导航
+watch(() => currentPage.value, (newPage) => {
+    if (newPage === 'airports') {
+        // 确保子导航显示
+        showSubNav.value = true
+        // 为机场子导航设置默认选中项
+        if (!activeSubItem.value) {
+            activeSubItem.value = 'airport-chart'
+        }
+    } else if (newPage === 'home') {
+        showSubNav.value = false
+        activeSubItem.value = ''
     }
 })
 
@@ -339,12 +345,13 @@ onUnmounted(() => {
         height: 100%;
         background: var(--nav-bg);
         border-radius: var(--radius-md);
-        transform: translateX(100%);
-        opacity: 0;
+        opacity: 1;
+        transform: translateX(0);
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
         &.slide-in-right {
-            animation: slideInFromRight 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+            transform: translateX(0);
+            opacity: 1;
         }
 
         &.slide-out-right {
