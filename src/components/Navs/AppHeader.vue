@@ -102,7 +102,7 @@ const toggleFullscreen = () => {
   align-items: center;
   justify-content: space-between;
   height: var(--header-height);
-  background: var(--header-bg);
+  background: var(--nav-bg);
   border-bottom: 1px solid var(--nav-border-color);
   padding: 0 var(--spacing-lg);
   position: fixed;

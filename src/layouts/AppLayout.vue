@@ -4,24 +4,11 @@
     <AppHeader
       :title="pageTitle"
       :subtitle="pageSubtitle"
-      @toggle-navigation="toggleNavigation"
       @open-settings="openSettings"
     />
 
-    <!-- Navigation Drawer -->
-    <NavDrawer
-      :is-open="isNavOpen"
-      :is-mobile="isMobile"
-      :active-item="activeNavItem"
-      :active-secondary-item="activeSecondaryItem"
-      :is-online="isOnline"
-      :last-sync-time="lastSyncTime"
-      @close="closeNavigation"
-      @navigate="handleNavigation"
-      @go-back="handleNavBack"
-    />
+    <AppNavBar />
 
-    <!-- Main Content Area -->
     <main 
       class="main-content"
       :class="{ 
@@ -38,9 +25,6 @@
         </router-view>
       </div>
     </main>
-
-    <!-- Mobile Bottom Navigation (if needed) -->
-    <!-- This would be implemented later for mobile-specific navigation -->
   </div>
 </template>
 
@@ -48,7 +32,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import AppHeader from '@/components/Navs/AppHeader.vue'
-import NavDrawer from '@/components/Navs/NavDrawer.vue'
+import AppNavBar from '@/components/Navs/AppNavBar.vue'
 
 // Router
 const router = useRouter()
@@ -78,35 +62,9 @@ const pageSubtitle = computed(() => {
   return route.meta?.subtitle as string || ''
 })
 
-// Methods
-const toggleNavigation = () => {
-  isNavOpen.value = !isNavOpen.value
-}
-
-const closeNavigation = () => {
-  isNavOpen.value = false
-}
 
 const openSettings = () => {
   router.push('/settings')
-}
-
-
-const handleNavigation = (item: any) => {
-  activeNavItem.value = item.id
-  if (item.route) {
-    router.push(item.route)
-  }
-  
-  // Close navigation on mobile after navigation
-  if (isMobile.value) {
-    closeNavigation()
-  }
-}
-
-const handleNavBack = () => {
-  // Handle navigation back action
-  console.log('Navigation back')
 }
 
 // Responsive handling
@@ -152,15 +110,12 @@ onUnmounted(() => {
 .main-content {
   flex: 1;
   margin-top: var(--header-height);
-  margin-left: 0;
+  margin-left: var(--nav-width-sidebar-md); // Default medium screen navigation width
+  margin-bottom: 0;
   transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   overflow: hidden;
   display: flex;
   flex-direction: column;
-
-  &.nav-open:not(.mobile) {
-    margin-left: var(--nav-width-desktop);
-  }
 
   .content-container {
     flex: 1;
@@ -194,12 +149,32 @@ onUnmounted(() => {
   transform: translateX(-20px);
 }
 
-// Mobile specific styles
-@media (max-width: 768px) {
+// Extra Large Screens (1920px+)
+@media (min-width: 1920px) {
   .main-content {
-    &.nav-open {
-      margin-left: 0; // No margin on mobile, drawer overlays
-    }
+    margin-left: var(--nav-width-sidebar-xl);
+  }
+}
+
+// Large Screens (1440px - 1919px)
+@media (min-width: 1440px) and (max-width: 1919px) {
+  .main-content {
+    margin-left: var(--nav-width-sidebar-lg);
+  }
+}
+
+// Small Desktop Screens (768px - 1023px)
+@media (min-width: 768px) and (max-width: 1023px) {
+  .main-content {
+    margin-left: var(--nav-width-sidebar-sm);
+  }
+}
+
+// Mobile specific styles
+@media (max-width: 767px) {
+  .main-content {
+    margin-left: 0; // No left margin on mobile
+    margin-bottom: var(--bottom-nav-height); // Space for bottom navigation
   }
 }
 
