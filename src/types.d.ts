@@ -5,3 +5,63 @@ type AIPVersion = {
     cycle: string,
     version_id: number
 }
+
+// 局方的json解析
+type OfficialAD = {
+    "id": string,
+    "pId": string,
+    "name": string,
+    "airporticao": string,
+    "name_cn": string,
+    "pdfPath": string,
+    "htmlPath": string,
+    "htmlEnPath": string,
+    "isOpened": boolean,
+    "Is_Modified": string
+}
+
+type OfficialENR = {
+    "id": string,
+    "pId": string,
+    "name": string,
+    "airporticao": string,
+    "name_cn": "ENR  第二部分 航路 (ENR)",
+    "pdfPath": string,
+    "htmlPath": string,
+    "htmlEnPath": string,
+    "isOpened": boolean,
+    "Is_Modified": string
+}
+
+type OfficialSUP = {
+    "Id": string,
+    "Document": string,
+    "CHAPTER_TYPE": string,
+    "Serial": string,
+    "Subject": string,
+    "Local_Subject": string,
+    "IS_MODIFIED": string,
+    "Effective_Time": string,
+    "Out_Date": string,
+    "Pub_Date": string
+}
+
+type OfficialAMDT = {
+    "id": string,
+    "pId": string,
+    "name": string,
+    "airporticao": string,
+    "name_cn": "ZYJM-4:AOC RWY06/24",
+    "pdfPath": string,
+    "htmlPath": string,
+    "htmlEnPath": string,
+    "isOpened": false,
+    "Is_Modified": null
+}
+
+type OfficialNOTAM = {
+    "SeriesName": string,
+    "Document": string,
+    "GenerateTime": string,
+    "GenerateTime_En": string
+}
