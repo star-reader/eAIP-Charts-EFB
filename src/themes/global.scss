@@ -152,3 +152,9 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--hover-bg);
 }
+
+[data-theme="night"] {
+  .vue-pdf-embed__page{
+    filter: invert(90%) contrast(130%) brightness(80%) hue-rotate(180deg);
+  }
+}

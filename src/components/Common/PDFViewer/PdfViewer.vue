@@ -19,7 +19,7 @@
       >
         <VuePdfEmbed
           ref="pdfEmbed"
-          :key="`pdf-${rotationKey}`"
+          :key="`pdf-${rotationKey}-${pdfSrc}`"
           :source="pdfSrc"
           :page="currentPage"
           :width="pdfWidth"
@@ -74,17 +74,9 @@
         </button>
         
         <div class="page-info">
-          <input 
-            v-model.number="pageInput"
-            @keyup.enter="goToPage"
-            @blur="goToPage"
-            class="page-input"
-            type="number"
-            :min="1"
-            :max="totalPages"
-          />
-          <span class="page-separator">/</span>
-          <span class="total-pages">{{ totalPages }}</span>
+          <span class="page-display">
+            {{ currentPage }} / {{ totalPages }}
+          </span>
         </div>
         
         <button 
@@ -126,16 +118,6 @@
             <AddOutline />
           </Icon>
         </button>
-        
-        <button 
-          class="control-btn"
-          @click="resetZoom"
-          title="重置缩放"
-        >
-          <Icon size="16">
-            <ContractOutline />
-          </Icon>
-        </button>
       </div>
 
       <!-- 旋转控制 -->
@@ -157,16 +139,6 @@
         >
           <Icon size="16">
             <RefreshOutline style="transform: scaleX(-1)" />
-          </Icon>
-        </button>
-        
-        <button 
-          class="control-btn"
-          @click="resetRotation"
-          title="重置旋转"
-        >
-          <Icon size="16">
-            <ExpandOutline />
           </Icon>
         </button>
       </div>
@@ -192,10 +164,17 @@
             <CropOutline />
           </Icon>
         </button>
-      </div>
 
-      <!-- 分隔线 -->
-      <div class="control-divider"></div>
+        <button 
+          class="control-btn"
+          @click="resetZoom"
+          title="重置缩放"
+        >
+          <Icon size="16">
+            <ContractOutline />
+          </Icon>
+        </button>
+      </div>
 
       <!-- 下载控制 -->
       <div class="download-controls">
@@ -266,7 +245,7 @@ const currentPage = ref(props.initialPage)
 const totalPages = ref(0)
 const zoomLevel = ref(props.initialZoom)
 const rotation = ref(0)
-const pageInput = ref(props.initialPage)
+
 const pdfDoc = ref<any>(null) // 存储PDF文档对象
 const rerenderKey = ref(0) // 用于强制重新渲染
 const rotationKey = ref(0) // 专门用于旋转的key
@@ -284,17 +263,23 @@ const lastTouchDistance = ref(0) // 上次触摸点距离
 const mouseX = ref(0) // 当前鼠标X位置
 const mouseY = ref(0) // 当前鼠标Y位置
 const lastWheelTime = ref(0) // 上次滚轮时间
-const wheelThrottleDelay = 16 // 节流延迟，约60fps
+const wheelThrottleDelay = 12 // 节流延迟，约80fps，平衡流畅度和稳定性
 
 // Computed
 const pdfSrc = computed(() => props.src)
 
 // PDF容器样式，包含平移
-const pdfContainerStyle = computed(() => ({
-  transform: `translate(${panX.value}px, ${panY.value}px)`,
-  transition: isDragging.value ? 'none' : 'transform 0.2s ease',
-  cursor: isDragging.value ? 'grabbing' : 'grab'
-}))
+const pdfContainerStyle = computed(() => {
+  // 确保平移值是有效的数字
+  const validPanX = isFinite(panX.value) ? panX.value : 0
+  const validPanY = isFinite(panY.value) ? panY.value : 0
+  
+  return {
+    transform: `translate(${validPanX}px, ${validPanY}px)`,
+    transition: isDragging.value ? 'none' : 'transform 0.2s ease',
+    cursor: isDragging.value ? 'grabbing' : 'grab'
+  }
+})
 
 // Methods
 const retryLoad = () => {
@@ -306,7 +291,6 @@ const retryLoad = () => {
 const nextPage = () => {
   if (currentPage.value < totalPages.value) {
     currentPage.value++
-    pageInput.value = currentPage.value
     emit('pageChange', currentPage.value)
   }
 }
@@ -314,22 +298,20 @@ const nextPage = () => {
 const previousPage = () => {
   if (currentPage.value > 1) {
     currentPage.value--
-    pageInput.value = currentPage.value
     emit('pageChange', currentPage.value)
   }
 }
 
-const goToPage = () => {
-  const page = Math.max(1, Math.min(pageInput.value, totalPages.value))
-  if (page !== currentPage.value) {
-    currentPage.value = page
-    pageInput.value = page
-    emit('pageChange', currentPage.value)
-  }
-}
+
 
 // 以鼠标位置为中心的缩放
 const zoomAtPoint = (scaleFactor: number, centerX?: number, centerY?: number) => {
+  // 确保baseWidth已经初始化
+  if (baseWidth.value <= 0) {
+    console.warn('baseWidth not initialized yet, skipping zoom')
+    return
+  }
+  
   const oldZoom = zoomLevel.value
   const newZoom = Math.max(0.25, Math.min(3.0, oldZoom * scaleFactor))
   
@@ -351,9 +333,15 @@ const zoomAtPoint = (scaleFactor: number, centerX?: number, centerY?: number) =>
     panY.value = (panY.value - relativeY) * zoomRatio + relativeY
   }
   
-  zoomLevel.value = newZoom
-  pdfWidth.value = baseWidth.value * zoomLevel.value
-  emit('zoomChange', zoomLevel.value)
+  // 计算新的PDF宽度，确保不为0或负数
+  const newPdfWidth = baseWidth.value * newZoom
+  if (newPdfWidth > 0) {
+    zoomLevel.value = newZoom
+    pdfWidth.value = newPdfWidth
+    emit('zoomChange', zoomLevel.value)
+  } else {
+    console.warn('Invalid PDF width calculated:', newPdfWidth)
+  }
 }
 
 // 缩放控制 - 使用width属性
@@ -491,6 +479,11 @@ const handlePdfProgress = (progress: any) => {
 const handleWheel = (event: WheelEvent) => {
   event.preventDefault()
   
+  // 如果PDF还在加载中，阻止缩放操作
+  if (isLoading.value || !pdfDoc.value) {
+    return
+  }
+  
   // 更新鼠标位置
   mouseX.value = event.clientX
   mouseY.value = event.clientY
@@ -506,10 +499,23 @@ const handleWheel = (event: WheelEvent) => {
     lastWheelTime.value = currentTime
     
     const delta = event.deltaY
-    // 降低缩放速度，使触控板体验更平滑
-    const scaleFactor = delta < 0 ? 1.08 : 0.92
     
-    // 立即进行缩放，不使用防抖
+    // 使用稳定的缩放算法，基于delta大小动态调整
+    const absDelta = Math.abs(delta)
+    let scaleFactor
+    
+    if (absDelta < 10) {
+      // 触控板的精细操作：小步长
+      scaleFactor = delta < 0 ? 1.05 : 0.95
+    } else if (absDelta < 50) {
+      // 中等步长
+      scaleFactor = delta < 0 ? 1.08 : 0.92
+    } else {
+      // 鼠标滚轮的大步长
+      scaleFactor = delta < 0 ? 1.12 : 0.88
+    }
+    
+    // 立即进行缩放
     zoomAtPoint(scaleFactor, mouseX.value, mouseY.value)
   } else {
     // 普通滚轮：平移
@@ -690,7 +696,6 @@ watch(() => props.src, (newSrc) => {
 
 watch(() => props.initialPage, (newPage) => {
   currentPage.value = newPage
-  pageInput.value = newPage
 })
 
 // 不再需要监听缩放变化，因为vue-pdf-embed会响应width属性变化
@@ -712,7 +717,6 @@ onUnmounted(() => {
 defineExpose({
   nextPage,
   previousPage,
-  goToPage,
   zoomIn,
   zoomOut,
   resetZoom,
@@ -738,11 +742,13 @@ defineExpose({
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: var(--spacing-lg);
+  // padding: var(--spacing-lg);
   overflow: auto;
   position: relative;
   background: var(--secondary-bg);
   user-select: none; // 防止拖拽时选中文本
+  overflow: hidden;
+  align-items: center;
   
   .pdf-wrapper {
     display: inline-block;
@@ -769,7 +775,7 @@ defineExpose({
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    background: rgba(255, 255, 255, 0.9);
+    background: var(--content-bg);
     backdrop-filter: blur(4px);
     z-index: 10;
     
@@ -808,15 +814,24 @@ defineExpose({
 }
 
 .pdf-controls {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
   width: 56px;
   background: var(--nav-bg);
-  border-left: 1px solid var(--nav-border-color);
+  border: 1px solid var(--nav-border-color);
+  border-radius: 12px;
   display: flex;
   flex-direction: column;
-  padding: var(--spacing-sm) var(--spacing-xs);
-  gap: var(--spacing-md);
+  justify-content: center;
+  align-items: center;
+  padding: var(--spacing-md) var(--spacing-xs);
+  gap: var(--spacing-xs);
   overflow-y: auto;
   z-index: var(--z-nav);
+  user-select: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   
   .page-controls,
   .zoom-controls,
@@ -861,28 +876,20 @@ defineExpose({
   
   .page-info {
     display: flex;
-    flex-direction: column;
+    justify-content: center;
     align-items: center;
     gap: 1px;
     padding: 4px 2px;
     background: var(--nav-hover-bg);
     border-radius: var(--radius-xs);
     
-    .page-input {
+    .page-display {
       width: 28px;
-      padding: 1px 2px;
       text-align: center;
-      border: 1px solid var(--nav-border-color);
-      border-radius: var(--radius-xs);
-      background: var(--primary-bg);
-      color: var(--text-primary);
+      color: var(--nav-text);
       font-size: 10px;
+      line-height: 1.2;
       font-weight: 500;
-      
-      &:focus {
-        outline: none;
-        border-color: var(--nav-accent);
-      }
     }
     
     .page-separator {
@@ -924,14 +931,15 @@ defineExpose({
 @media (max-width: 1023px) {
   .pdf-controls {
     width: 48px;
-    padding: var(--spacing-xs);
+    padding: var(--spacing-sm) var(--spacing-xs);
+    border-radius: 10px;
     
     .control-btn {
       width: 32px;
       height: 32px;
     }
     
-    .page-info .page-input {
+    .page-info .page-display {
       width: 24px;
       font-size: 9px;
     }
@@ -939,36 +947,32 @@ defineExpose({
 }
 
 @media (max-width: 767px) {
-  .pdf-viewer-container {
-    flex-direction: column;
-  }
-  
-  .pdf-content {
-    padding: var(--spacing-md);
-  }
-  
   .pdf-controls {
-    width: 100%;
+    position: fixed;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 48px;
     height: auto;
-    flex-direction: row;
-    overflow-x: auto;
-    padding: var(--spacing-sm);
-    border-left: none;
-    border-top: 1px solid var(--nav-border-color);
+    flex-direction: column;
+    overflow-y: auto;
+    padding: var(--spacing-md) var(--spacing-xs);
+    border-radius: 8px 0 0 8px;
+    box-shadow: -2px 0 8px rgba(0, 0, 0, 0.15);
     
     .page-controls,
     .zoom-controls,
     .rotation-controls,
     .fit-controls,
     .download-controls {
-      flex-direction: row;
+      flex-direction: column;
       flex-shrink: 0;
     }
     
     .control-divider {
-      width: 1px;
-      height: 32px;
-      margin: 0 var(--spacing-sm);
+      width: 32px;
+      height: 1px;
+      margin: var(--spacing-sm) 0;
     }
   }
 }

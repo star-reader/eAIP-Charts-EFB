@@ -9,8 +9,6 @@
 
     <AppNavBar />
 
-
-
     <main 
       class="main-content"
       :class="{ 
@@ -34,46 +32,32 @@
 
 <script lang="ts" setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import pubsub from 'pubsub-js'
 import { useRouter, useRoute } from 'vue-router'
 import AppHeader from '@/components/Navs/AppHeader.vue'
 import AppNavBar from '@/components/Navs/AppNavBar.vue'
 
 // Router
 const router = useRouter()
-const route = useRoute()
 
 // State
 const isNavOpen = ref(false)
 const isMobile = ref(false)
-const hasNotifications = ref(false)
-const notificationCount = ref(0)
 const isOnline = ref(navigator.onLine)
-const lastSyncTime = ref<Date>(new Date())
 
-// Navigation state
-const activeNavItem = ref('home')
-const activeSecondaryItem = ref('')
-
-
-
-// Remove breadcrumbs - not part of this design
+interface TitleChangeData {
+  title: string
+  subTitle?: string
+}
 
 // Computed properties
-const pageTitle = computed(() => {
-  // Get title from route meta or use default
-  return route.meta?.title as string || 'eAIP Charts EFB'
-})
+const pageTitle = ref('eAIP Charts')
 
-const pageSubtitle = computed(() => {
-  return route.meta?.subtitle as string || ''
-})
-
+const pageSubtitle = ref('')
 
 const openSettings = () => {
   router.push('/settings')
 }
-
-
 
 // Responsive handling
 const handleResize = () => {
@@ -99,15 +83,17 @@ onMounted(() => {
   window.addEventListener('resize', handleResize)
   window.addEventListener('online', handleOnlineStatus)
   window.addEventListener('offline', handleOnlineStatus)
-  
 
+  pubsub.subscribe('title-change', (_, data: TitleChangeData) => {
+    pageTitle.value = data.title
+    pageSubtitle.value = data.subTitle || ''
+  })
 })
 
 onUnmounted(() => {
   window.removeEventListener('resize', handleResize)
   window.removeEventListener('online', handleOnlineStatus)
   window.removeEventListener('offline', handleOnlineStatus)
-  
 
 })
 </script>

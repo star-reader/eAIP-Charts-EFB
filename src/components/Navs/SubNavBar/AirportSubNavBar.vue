@@ -137,19 +137,15 @@ const toggleAirportSelect = () => {
 const handleNavClick = (item: any) => {
    emit('navigate', item)
    
-   // 如果是细则，直接输出内容到控制台
+   // 如果是细则，直接显示
    if (item.id === 'details') {
-     console.log('细则内容:', chartsData.value?.airport || [])
+     // console.log('细则内容:', chartsData.value?.airport || [])
+     pubsub.publish('chart-ad-selected', chartsData.value?.ad)
      return
    }
    
    // 其他类别输出对应的航图内容到控制台
    const categoryData = chartsData.value?.[item.id as keyof typeof chartsData.value]
-   if (Array.isArray(categoryData)) {
-     console.log(`${item.text}内容:`, categoryData)
-   } else if (categoryData) {
-     console.log(`${item.text}内容:`, categoryData)
-   }
    
    // 广播显示航图选择器事件
    pubsub.publish('show-charts-selection', {
@@ -170,7 +166,6 @@ const loadAirportCharts = async (icao: string) => {
         const data = await getCategorizedChartsByICAO(icao)
         chartsData.value = data
     } catch (error) {
-        console.error('Failed to load airport charts:', error)
         chartsData.value = null
     } finally {
         isLoadingCharts.value = false

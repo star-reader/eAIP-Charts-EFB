@@ -41,10 +41,9 @@
 </template>
 
 <script lang="ts" setup>
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { Icon } from '@vicons/utils'
 import { 
-  MenuOutline, 
   SunnyOutline, 
   MoonOutline, 
   ScanOutline, 
@@ -94,6 +93,7 @@ const toggleFullscreen = () => {
     document.exitFullscreen()
   }
 }
+
 </script>
 
 <style lang="scss" scoped>

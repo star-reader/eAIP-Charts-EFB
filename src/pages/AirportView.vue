@@ -67,7 +67,6 @@ const handleAirportSelect = (airport: AirportList) => {
   selectedAirport.value = airport.airporticao
   currentAirportData.value = airport
   showAirportSelection.value = false
-  console.log('Selected airport:', airport)
 }
 
 // Charts Selection handlers
@@ -78,26 +77,25 @@ const handleChartsSelectionClose = () => {
 const handleChartSelect = (chart: OfficialAD) => {
   showChartsSelection.value = false
   selectedChart.value = chart
-  console.log('Selected chart:', chart)
-  console.log('PDF path:', chart.pdfPath)
-  console.log('PDF URL will be:', import.meta.env.VITE_API_HOST + '/data' + chart.pdfPath)
+  pubsub.publish('title-change', {
+    title: chart.name,
+    subtitle: ''
+  })
 }
 
+
 // PDF Viewer event handlers
+// 真不知道写啥了， console.log也不用了
 const handlePdfPageChange = (page: number) => {
-  console.log('PDF页面变更:', page)
 }
 
 const handlePdfZoomChange = (zoom: number) => {
-  console.log('PDF缩放变更:', zoom)
 }
 
 const handlePdfLoaded = (totalPages: number) => {
-  console.log('PDF加载完成，总页数:', totalPages)
 }
 
 const handlePdfError = (error: string) => {
-  console.error('PDF加载错误:', error)
 }
 
 // PubSub event handlers
@@ -112,7 +110,6 @@ const handleAirportSelected = (message: string, airport: AirportList) => {
   selectedAirport.value = airport.airporticao
   currentAirportData.value = airport
   showAirportSelection.value = false
-  console.log('Airport selected via pubsub:', airport)
 }
 
 const handleShowChartsSelection = (message: string, data: any) => {
@@ -131,6 +128,7 @@ onMounted(() => {
   pubsub.subscribe('show-airport-selection', handleShowAirportSelection)
   pubsub.subscribe('airport-selected', handleAirportSelected)
   pubsub.subscribe('show-charts-selection', handleShowChartsSelection)
+  pubsub.subscribe('chart-ad-selected', (_, data) => handleChartSelect(data))
 })
 
 onUnmounted(() => {
