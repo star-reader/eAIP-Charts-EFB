@@ -134,7 +134,7 @@ onUnmounted(() => {
   .content-container {
     flex: 1;
     overflow-y: auto;
-    padding: var(--spacing-lg);
+    padding: 0;
     background: var(--content-bg);
 
     @media (max-width: 768px) {

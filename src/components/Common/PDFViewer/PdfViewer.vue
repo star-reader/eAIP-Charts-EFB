@@ -1,30 +1,46 @@
 <template>
   <div class="pdf-viewer-container" v-if="pdfSrc">
     <!-- PDF渲染区域 -->
-    <div class="pdf-content" ref="pdfContainer">
-      <VuePdfEmbed
-        ref="pdfEmbed"
-        :key="`pdf-${rotationKey}`"
-        :source="pdfSrc"
-        :page="currentPage"
-        :width="pdfWidth"
-        :rotation="rotation"
-        annotation-layer
-        text-layer
-        @loaded="handlePdfLoaded"
-        @loading-failed="handlePdfError"
-        @rendered="handlePdfRendered"
-        @progress="handlePdfProgress"
-        class="pdf-embed"
-        :style="{
-          transformOrigin: 'center center'
-        }"
-      />
+    <div 
+      class="pdf-content" 
+      ref="pdfContainer"
+      @wheel="handleWheel"
+      @mousedown="handleMouseDown"
+      @mousemove="handleMouseMove"
+      @mouseup="handleMouseUp"
+      @mouseleave="handleMouseUp"
+      @touchstart="handleTouchStart"
+      @touchmove="handleTouchMove"
+      @touchend="handleTouchEnd"
+    >
+      <div 
+        class="pdf-wrapper"
+        :style="pdfContainerStyle"
+      >
+        <VuePdfEmbed
+          ref="pdfEmbed"
+          :key="`pdf-${rotationKey}`"
+          :source="pdfSrc"
+          :page="currentPage"
+          :width="pdfWidth"
+          :rotation="rotation"
+          annotation-layer
+          text-layer
+          @loaded="handlePdfLoaded"
+          @loading-failed="handlePdfError"
+          @rendered="handlePdfRendered"
+          @progress="handlePdfProgress"
+          class="pdf-embed"
+          :style="{
+            transformOrigin: 'center center'
+          }"
+        />
+      </div>
       
       <!-- 加载状态 -->
       <div v-if="isLoading" class="loading-overlay">
         <n-spin size="large" />
-        <p class="loading-text">加载PDF中...</p>
+        <p class="loading-text">加载航图中...</p>
       </div>
       
       <!-- 错误状态 -->
@@ -257,8 +273,28 @@ const rotationKey = ref(0) // 专门用于旋转的key
 const pdfWidth = ref<number>(600) // PDF显示宽度
 const baseWidth = ref<number>(595) // PDF原始宽度 (A4标准)
 
+// 平移和手势控制状态
+const panX = ref(0) // X轴平移距离
+const panY = ref(0) // Y轴平移距离
+const isDragging = ref(false) // 是否正在拖拽
+const lastMouseX = ref(0) // 上次鼠标X位置
+const lastMouseY = ref(0) // 上次鼠标Y位置
+const isTouch = ref(false) // 是否为触摸操作
+const lastTouchDistance = ref(0) // 上次触摸点距离
+const mouseX = ref(0) // 当前鼠标X位置
+const mouseY = ref(0) // 当前鼠标Y位置
+const lastWheelTime = ref(0) // 上次滚轮时间
+const wheelThrottleDelay = 16 // 节流延迟，约60fps
+
 // Computed
 const pdfSrc = computed(() => props.src)
+
+// PDF容器样式，包含平移
+const pdfContainerStyle = computed(() => ({
+  transform: `translate(${panX.value}px, ${panY.value}px)`,
+  transition: isDragging.value ? 'none' : 'transform 0.2s ease',
+  cursor: isDragging.value ? 'grabbing' : 'grab'
+}))
 
 // Methods
 const retryLoad = () => {
@@ -292,29 +328,63 @@ const goToPage = () => {
   }
 }
 
+// 以鼠标位置为中心的缩放
+const zoomAtPoint = (scaleFactor: number, centerX?: number, centerY?: number) => {
+  const oldZoom = zoomLevel.value
+  const newZoom = Math.max(0.25, Math.min(3.0, oldZoom * scaleFactor))
+  
+  if (newZoom === oldZoom) return // 没有变化就不处理
+  
+  // 如果提供了中心点，计算缩放后的平移调整
+  if (centerX !== undefined && centerY !== undefined && pdfContainer.value) {
+    const rect = pdfContainer.value.getBoundingClientRect()
+    
+    // 将鼠标位置转换为相对于PDF容器的坐标
+    const relativeX = centerX - rect.left - rect.width / 2
+    const relativeY = centerY - rect.top - rect.height / 2
+    
+    // 计算缩放比例
+    const zoomRatio = newZoom / oldZoom
+    
+    // 调整平移位置，使缩放以鼠标位置为中心
+    panX.value = (panX.value - relativeX) * zoomRatio + relativeX
+    panY.value = (panY.value - relativeY) * zoomRatio + relativeY
+  }
+  
+  zoomLevel.value = newZoom
+  pdfWidth.value = baseWidth.value * zoomLevel.value
+  emit('zoomChange', zoomLevel.value)
+}
+
 // 缩放控制 - 使用width属性
 const zoomIn = () => {
-  if (zoomLevel.value < 3.0) {
-    zoomLevel.value = Math.min(3.0, zoomLevel.value * 1.25)
-    pdfWidth.value = baseWidth.value * zoomLevel.value
-    console.log('Zoom in to:', zoomLevel.value, 'width:', pdfWidth.value)
-    emit('zoomChange', zoomLevel.value)
+  // 按钮缩放使用PDF容器中心
+  if (pdfContainer.value) {
+    const rect = pdfContainer.value.getBoundingClientRect()
+    const centerX = rect.left + rect.width / 2
+    const centerY = rect.top + rect.height / 2
+    zoomAtPoint(1.25, centerX, centerY)
+  } else {
+    zoomAtPoint(1.25)
   }
 }
 
 const zoomOut = () => {
-  if (zoomLevel.value > 0.25) {
-    zoomLevel.value = Math.max(0.25, zoomLevel.value / 1.25)
-    pdfWidth.value = baseWidth.value * zoomLevel.value
-    console.log('Zoom out to:', zoomLevel.value, 'width:', pdfWidth.value)
-    emit('zoomChange', zoomLevel.value)
+  // 按钮缩放使用PDF容器中心
+  if (pdfContainer.value) {
+    const rect = pdfContainer.value.getBoundingClientRect()
+    const centerX = rect.left + rect.width / 2
+    const centerY = rect.top + rect.height / 2
+    zoomAtPoint(0.8, centerX, centerY)
+  } else {
+    zoomAtPoint(0.8)
   }
 }
 
 const resetZoom = () => {
   zoomLevel.value = 1.0
   pdfWidth.value = baseWidth.value * zoomLevel.value
-  console.log('Reset zoom to:', zoomLevel.value, 'width:', pdfWidth.value)
+  resetPan() // 重置缩放时也重置平移
   emit('zoomChange', zoomLevel.value)
 }
 
@@ -325,7 +395,7 @@ const fitToWidth = () => {
   const containerWidth = pdfContainer.value.clientWidth - 100
   zoomLevel.value = containerWidth / baseWidth.value
   pdfWidth.value = containerWidth
-  console.log('Fit to width:', zoomLevel.value, 'width:', pdfWidth.value)
+  resetPan() // 重置平移
   emit('zoomChange', zoomLevel.value)
 }
 
@@ -342,37 +412,27 @@ const fitToPage = () => {
   
   zoomLevel.value = Math.min(widthScale, heightScale)
   pdfWidth.value = baseWidth.value * zoomLevel.value
-  console.log('Fit to page:', zoomLevel.value, 'width:', pdfWidth.value)
+  resetPan() // 重置平移
   emit('zoomChange', zoomLevel.value)
 }
 
 // 旋转控制
 const rotateLeft = () => {
   rotation.value = (rotation.value - 90) % 360
-  console.log('Rotate left to:', rotation.value)
   // 只有旋转需要强制重新渲染
   rotationKey.value++
 }
 
 const rotateRight = () => {
   rotation.value = (rotation.value + 90) % 360
-  console.log('Rotate right to:', rotation.value)
   // 只有旋转需要强制重新渲染
   rotationKey.value++
 }
 
 const resetRotation = () => {
   rotation.value = 0
-  console.log('Reset rotation to:', rotation.value)
   // 只有旋转需要强制重新渲染
   rotationKey.value++
-}
-
-// 强制重新渲染方法
-const forceRerender = () => {
-  console.log('Force rerender with zoom:', zoomLevel.value, 'rotation:', rotation.value)
-  // 通过更改key来强制重新渲染整个组件
-  rerenderKey.value++
 }
 
 // 下载控制
@@ -387,7 +447,6 @@ const downloadPDF = () => {
 
 // Vue PDF Embed 事件处理
 const handlePdfLoaded = async (doc: any) => {
-  console.log('PDF loaded:', doc)
   totalPages.value = doc.numPages
   pdfDoc.value = doc
   
@@ -406,9 +465,7 @@ const handlePdfLoaded = async (doc: any) => {
       pdfWidth.value = baseWidth.value * zoomLevel.value
     }
     
-    console.log('PDF dimensions - base width:', baseWidth.value, 'display width:', pdfWidth.value, 'zoom:', zoomLevel.value)
   } catch (err) {
-    console.error('Failed to get PDF dimensions:', err)
     // 使用默认值
     pdfWidth.value = baseWidth.value * zoomLevel.value
   }
@@ -418,19 +475,161 @@ const handlePdfLoaded = async (doc: any) => {
 }
 
 const handlePdfError = (error: any) => {
-  console.error('PDF loading failed:', error)
-  error.value = error.message || '加载PDF失败'
+  error.value = error.message || '加载航图失败'
   isLoading.value = false
   emit('error', error.value)
 }
 
 const handlePdfRendered = () => {
-  console.log('PDF rendered')
   isLoading.value = false
 }
 
 const handlePdfProgress = (progress: any) => {
-  console.log('PDF loading progress:', progress)
+}
+
+// 鼠标滚轮处理
+const handleWheel = (event: WheelEvent) => {
+  event.preventDefault()
+  
+  // 更新鼠标位置
+  mouseX.value = event.clientX
+  mouseY.value = event.clientY
+  
+  if (event.ctrlKey || event.metaKey) {
+    // Ctrl+滚轮：缩放（以鼠标位置为中心）
+    const currentTime = Date.now()
+    
+    // 节流处理，避免过于频繁的缩放操作
+    if (currentTime - lastWheelTime.value < wheelThrottleDelay) {
+      return
+    }
+    lastWheelTime.value = currentTime
+    
+    const delta = event.deltaY
+    // 降低缩放速度，使触控板体验更平滑
+    const scaleFactor = delta < 0 ? 1.08 : 0.92
+    
+    // 立即进行缩放，不使用防抖
+    zoomAtPoint(scaleFactor, mouseX.value, mouseY.value)
+  } else {
+    // 普通滚轮：平移
+    // 降低平移速度
+    const panSpeed = 0.8
+    
+    if (event.shiftKey) {
+      // Shift+滚轮：水平滚动
+      panX.value -= event.deltaY * panSpeed
+    } else {
+      // 垂直和水平滚动
+      panX.value -= event.deltaX * panSpeed
+      panY.value -= event.deltaY * panSpeed
+    }
+  }
+}
+
+// 鼠标拖拽处理
+const handleMouseDown = (event: MouseEvent) => {
+  if (event.button === 0) { // 左键
+    isDragging.value = true
+    lastMouseX.value = event.clientX
+    lastMouseY.value = event.clientY
+    event.preventDefault()
+  }
+}
+
+const handleMouseMove = (event: MouseEvent) => {
+  // 始终更新鼠标位置
+  mouseX.value = event.clientX
+  mouseY.value = event.clientY
+  
+  if (isDragging.value) {
+    const deltaX = event.clientX - lastMouseX.value
+    const deltaY = event.clientY - lastMouseY.value
+    
+    panX.value += deltaX
+    panY.value += deltaY
+    
+    lastMouseX.value = event.clientX
+    lastMouseY.value = event.clientY
+    event.preventDefault()
+  }
+}
+
+const handleMouseUp = () => {
+  isDragging.value = false
+}
+
+// 触摸手势处理
+const handleTouchStart = (event: TouchEvent) => {
+  event.preventDefault()
+  
+  if (event.touches.length === 1) {
+    // 单指：拖拽
+    isDragging.value = true
+    isTouch.value = true
+    lastMouseX.value = event.touches[0].clientX
+    lastMouseY.value = event.touches[0].clientY
+  } else if (event.touches.length === 2) {
+    // 双指：缩放
+    isDragging.value = false
+    isTouch.value = true
+    const touch1 = event.touches[0]
+    const touch2 = event.touches[1]
+    lastTouchDistance.value = Math.sqrt(
+      Math.pow(touch2.clientX - touch1.clientX, 2) +
+      Math.pow(touch2.clientY - touch1.clientY, 2)
+    )
+  }
+}
+
+const handleTouchMove = (event: TouchEvent) => {
+  event.preventDefault()
+  
+  if (event.touches.length === 1 && isDragging.value) {
+    // 单指拖拽
+    const deltaX = event.touches[0].clientX - lastMouseX.value
+    const deltaY = event.touches[0].clientY - lastMouseY.value
+    
+    panX.value += deltaX
+    panY.value += deltaY
+    
+    lastMouseX.value = event.touches[0].clientX
+    lastMouseY.value = event.touches[0].clientY
+  } else if (event.touches.length === 2) {
+    // 双指缩放
+    const touch1 = event.touches[0]
+    const touch2 = event.touches[1]
+    const currentDistance = Math.sqrt(
+      Math.pow(touch2.clientX - touch1.clientX, 2) +
+      Math.pow(touch2.clientY - touch1.clientY, 2)
+    )
+    
+    if (lastTouchDistance.value > 0) {
+      const scale = currentDistance / lastTouchDistance.value
+      
+      // 计算两指中心点作为缩放中心
+      const centerX = (touch1.clientX + touch2.clientX) / 2
+      const centerY = (touch1.clientY + touch2.clientY) / 2
+      
+      // 使用中心点缩放，但限制缩放速度
+      const limitedScale = Math.max(0.95, Math.min(1.05, scale))
+      zoomAtPoint(limitedScale, centerX, centerY)
+    }
+    
+    lastTouchDistance.value = currentDistance
+  }
+}
+
+const handleTouchEnd = () => {
+  isDragging.value = false
+  isTouch.value = false
+  lastTouchDistance.value = 0
+}
+
+// 重置平移
+const resetPan = () => {
+  panX.value = 0
+  panY.value = 0
 }
 
 // 键盘事件处理
@@ -463,6 +662,14 @@ const handleKeyDown = (event: KeyboardEvent) => {
       if (event.ctrlKey || event.metaKey) {
         event.preventDefault()
         resetZoom()
+        resetPan()
+      }
+      break
+    case 'r':
+    case 'R':
+      if (event.ctrlKey || event.metaKey) {
+        event.preventDefault()
+        resetPan()
       }
       break
   }
@@ -513,14 +720,15 @@ defineExpose({
   fitToPage,
   rotateLeft,
   rotateRight,
-  resetRotation
+  resetRotation,
+  resetPan
 })
 </script>
 
 <style lang='scss' scoped>
 .pdf-viewer-container {
   display: flex;
-  height: 100vh;
+  height: calc(100vh - var(--header-height));
   background: var(--primary-bg);
   position: relative;
 }
@@ -534,14 +742,20 @@ defineExpose({
   overflow: auto;
   position: relative;
   background: var(--secondary-bg);
+  user-select: none; // 防止拖拽时选中文本
   
-  .pdf-embed {
-    max-width: 100%;
-    max-height: 100%;
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
-    box-shadow: var(--shadow-heavy);
-    background: white;
+  .pdf-wrapper {
+    display: inline-block;
+    
+    .pdf-embed {
+      max-width: none; // 允许超出容器进行平移
+      max-height: none;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-heavy);
+      background: white;
+      display: block;
+    }
   }
   
   .loading-overlay,
