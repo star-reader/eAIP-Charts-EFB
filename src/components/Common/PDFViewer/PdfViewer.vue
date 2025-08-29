@@ -3,12 +3,12 @@
     <!-- PDF渲染区域 -->
     <div class="pdf-content" ref="pdfContainer">
       <VuePdfEmbed
+        ref="pdfEmbed"
+        :key="`pdf-${rotationKey}`"
         :source="pdfSrc"
         :page="currentPage"
-        :scale="zoomLevel"
-        :rotation="rotation"
         :width="pdfWidth"
-        :height="pdfHeight"
+        :rotation="rotation"
         annotation-layer
         text-layer
         @loaded="handlePdfLoaded"
@@ -241,6 +241,7 @@ const emit = defineEmits<{
 
 // Refs
 const pdfContainer = ref<HTMLDivElement>()
+const pdfEmbed = ref<any>()
 
 // State
 const isLoading = ref(false)
@@ -250,8 +251,11 @@ const totalPages = ref(0)
 const zoomLevel = ref(props.initialZoom)
 const rotation = ref(0)
 const pageInput = ref(props.initialPage)
-const pdfWidth = ref<number | undefined>(undefined)
-const pdfHeight = ref<number | undefined>(undefined)
+const pdfDoc = ref<any>(null) // 存储PDF文档对象
+const rerenderKey = ref(0) // 用于强制重新渲染
+const rotationKey = ref(0) // 专门用于旋转的key
+const pdfWidth = ref<number>(600) // PDF显示宽度
+const baseWidth = ref<number>(595) // PDF原始宽度 (A4标准)
 
 // Computed
 const pdfSrc = computed(() => props.src)
@@ -288,10 +292,12 @@ const goToPage = () => {
   }
 }
 
-// 缩放控制
+// 缩放控制 - 使用width属性
 const zoomIn = () => {
   if (zoomLevel.value < 3.0) {
     zoomLevel.value = Math.min(3.0, zoomLevel.value * 1.25)
+    pdfWidth.value = baseWidth.value * zoomLevel.value
+    console.log('Zoom in to:', zoomLevel.value, 'width:', pdfWidth.value)
     emit('zoomChange', zoomLevel.value)
   }
 }
@@ -299,12 +305,16 @@ const zoomIn = () => {
 const zoomOut = () => {
   if (zoomLevel.value > 0.25) {
     zoomLevel.value = Math.max(0.25, zoomLevel.value / 1.25)
+    pdfWidth.value = baseWidth.value * zoomLevel.value
+    console.log('Zoom out to:', zoomLevel.value, 'width:', pdfWidth.value)
     emit('zoomChange', zoomLevel.value)
   }
 }
 
 const resetZoom = () => {
   zoomLevel.value = 1.0
+  pdfWidth.value = baseWidth.value * zoomLevel.value
+  console.log('Reset zoom to:', zoomLevel.value, 'width:', pdfWidth.value)
   emit('zoomChange', zoomLevel.value)
 }
 
@@ -313,9 +323,9 @@ const fitToWidth = () => {
   if (!pdfContainer.value) return
   
   const containerWidth = pdfContainer.value.clientWidth - 100
-  // 估算标准PDF页面宽度为595px (A4)
-  const standardWidth = 595
-  zoomLevel.value = containerWidth / standardWidth
+  zoomLevel.value = containerWidth / baseWidth.value
+  pdfWidth.value = containerWidth
+  console.log('Fit to width:', zoomLevel.value, 'width:', pdfWidth.value)
   emit('zoomChange', zoomLevel.value)
 }
 
@@ -324,28 +334,45 @@ const fitToPage = () => {
   
   const containerWidth = pdfContainer.value.clientWidth - 100
   const containerHeight = pdfContainer.value.clientHeight - 100
-  // 估算标准PDF页面尺寸 (A4: 595x842)
-  const standardWidth = 595
+  // A4比例: 595x842
   const standardHeight = 842
   
-  zoomLevel.value = Math.min(
-    containerWidth / standardWidth,
-    containerHeight / standardHeight
-  )
+  const widthScale = containerWidth / baseWidth.value
+  const heightScale = containerHeight / standardHeight
+  
+  zoomLevel.value = Math.min(widthScale, heightScale)
+  pdfWidth.value = baseWidth.value * zoomLevel.value
+  console.log('Fit to page:', zoomLevel.value, 'width:', pdfWidth.value)
   emit('zoomChange', zoomLevel.value)
 }
 
 // 旋转控制
 const rotateLeft = () => {
   rotation.value = (rotation.value - 90) % 360
+  console.log('Rotate left to:', rotation.value)
+  // 只有旋转需要强制重新渲染
+  rotationKey.value++
 }
 
 const rotateRight = () => {
   rotation.value = (rotation.value + 90) % 360
+  console.log('Rotate right to:', rotation.value)
+  // 只有旋转需要强制重新渲染
+  rotationKey.value++
 }
 
 const resetRotation = () => {
   rotation.value = 0
+  console.log('Reset rotation to:', rotation.value)
+  // 只有旋转需要强制重新渲染
+  rotationKey.value++
+}
+
+// 强制重新渲染方法
+const forceRerender = () => {
+  console.log('Force rerender with zoom:', zoomLevel.value, 'rotation:', rotation.value)
+  // 通过更改key来强制重新渲染整个组件
+  rerenderKey.value++
 }
 
 // 下载控制
@@ -359,9 +386,33 @@ const downloadPDF = () => {
 }
 
 // Vue PDF Embed 事件处理
-const handlePdfLoaded = (doc: any) => {
+const handlePdfLoaded = async (doc: any) => {
   console.log('PDF loaded:', doc)
   totalPages.value = doc.numPages
+  pdfDoc.value = doc
+  
+  try {
+    // 获取第一页来确定PDF的真实尺寸
+    const page = await doc.getPage(1)
+    const viewport = page.getViewport({ scale: 1 })
+    baseWidth.value = viewport.width
+    
+    // 计算初始显示宽度
+    if (pdfContainer.value) {
+      const containerWidth = pdfContainer.value.clientWidth - 100
+      zoomLevel.value = Math.min(containerWidth / baseWidth.value, 1.0)
+      pdfWidth.value = baseWidth.value * zoomLevel.value
+    } else {
+      pdfWidth.value = baseWidth.value * zoomLevel.value
+    }
+    
+    console.log('PDF dimensions - base width:', baseWidth.value, 'display width:', pdfWidth.value, 'zoom:', zoomLevel.value)
+  } catch (err) {
+    console.error('Failed to get PDF dimensions:', err)
+    // 使用默认值
+    pdfWidth.value = baseWidth.value * zoomLevel.value
+  }
+  
   isLoading.value = false
   emit('loaded', totalPages.value)
 }
@@ -434,6 +485,8 @@ watch(() => props.initialPage, (newPage) => {
   currentPage.value = newPage
   pageInput.value = newPage
 })
+
+// 不再需要监听缩放变化，因为vue-pdf-embed会响应width属性变化
 
 // Lifecycle
 onMounted(() => {
