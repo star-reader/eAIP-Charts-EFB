@@ -42,6 +42,24 @@
                     @navigate="handleSubNavClick"
                 />
             </div>
+
+            <!-- 航路子导航 -->
+            <div
+                v-show="currentPage === 'enroute'"
+                class="sub-nav-container"
+                :class="{ 
+                    'slide-in-right': showSubNav,
+                    'slide-out-right': !showSubNav,
+                    'animating': isAnimating 
+                }"
+            >
+                <EnrouteSubNavBar 
+                    :is-mobile="isMobile"
+                    :active-item="activeSubItem"
+                    @go-home="goHome"
+                    @navigate="handleSubNavClick"
+                />
+            </div>
         </nav>
     </NavBarContainer>
 </template>
@@ -62,6 +80,7 @@ import {
 } from '@vicons/ionicons5'
 import NavBarContainer from './NavBarContainer.vue'
 import AirportSubNavBar from './SubNavBar/AirportSubNavBar.vue'
+import EnrouteSubNavBar from './SubNavBar/EnrouteSubNavBar.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -194,7 +213,7 @@ watch(isHome, (newValue, oldValue) => {
             
             // 稍微延迟显示子导航，让主导航先开始滑出
             setTimeout(() => {
-                if (currentPage.value === 'airports') {
+                if (currentPage.value === 'airports' || currentPage.value === 'enroute') {
                     showSubNav.value = true
                 }
             }, 100)
@@ -367,7 +386,6 @@ onUnmounted(() => {
         left: 0;
         width: 100%;
         height: 100%;
-        background: var(--nav-bg);
         border-radius: var(--radius-md);
         opacity: 0;
         transform: translateX(100%);
@@ -404,6 +422,10 @@ onUnmounted(() => {
 @keyframes slideInFromRight {
     0% {
         transform: translateX(100%);
+        opacity: 0;
+    }
+    70% {
+        transform: translateX(10%);
         opacity: 0;
     }
     100% {

@@ -1,7 +1,39 @@
 <template>
   <div class="pdf-viewer-container" v-if="pdfSrc">
-    <!-- PDF渲染区域 -->
+    
+    <!-- 大文件警告 -->
+    <div v-if="showLargeFileWarning" class="large-file-warning">
+      <NAlert type="warning" title="大文件提示" show-icon>
+        <div class="warning-content">
+          <p>检测到这是一个大型航图文件，在浏览器中预览可能会影响性能。</p>
+          <p>建议您选择以下方式之一：</p>
+          <div class="warning-actions">
+            <NButton type="primary" @click="handleUseIframeMode">
+              <Icon size="14" style="margin-right: 4px">
+                <DownloadOutline />
+              </Icon>
+              使用本地阅读器
+            </NButton>
+            <NButton @click="handleUsePdfEmbed">
+              继续在浏览器中查看
+            </NButton>
+          </div>
+        </div>
+      </NAlert>
+    </div>
+
+    <!-- iframe模式 -->
+    <div v-else-if="useIframeMode" class="iframe-mode">
+      <iframe 
+        :src="pdfSrc + '#toolbar=0'"
+        class="pdf-iframe"
+        frameborder="0"
+      ></iframe>
+    </div>
+
+    <!-- 正常PDF渲染区域 -->
     <div 
+      v-else
       class="pdf-content" 
       ref="pdfContainer"
       @wheel="handleWheel"
@@ -59,7 +91,7 @@
     </div>
 
     <!-- 操作面板 -->
-    <div class="pdf-controls">
+    <div v-if="!useIframeMode" class="pdf-controls">
       <!-- 页面导航 -->
       <div class="page-controls">
         <button 
@@ -111,7 +143,7 @@
         <button 
           class="control-btn"
           @click="zoomIn"
-          :disabled="zoomLevel >= 3.0"
+          :disabled="zoomLevel >= (isLargeFile ? 3.0 : 6.0)"
           title="放大"
         >
           <Icon size="16">
@@ -195,6 +227,7 @@
 <script lang='ts' setup>
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { Icon } from '@vicons/utils'
+import { NAlert, NButton } from 'naive-ui'
 import { NSpin } from 'naive-ui'
 import {
   ChevronUpOutline,
@@ -251,6 +284,11 @@ const rerenderKey = ref(0) // 用于强制重新渲染
 const rotationKey = ref(0) // 专门用于旋转的key
 const pdfWidth = ref<number>(600) // PDF显示宽度
 const baseWidth = ref<number>(595) // PDF原始宽度 (A4标准)
+
+// 大文件处理
+const showLargeFileWarning = ref(false)
+const useIframeMode = ref(false)
+const isLargeFile = ref(false)
 
 // 平移和手势控制状态
 const panX = ref(0) // X轴平移距离
@@ -312,8 +350,11 @@ const zoomAtPoint = (scaleFactor: number, centerX?: number, centerY?: number) =>
     return
   }
   
+  // 大文件性能优化：限制最大缩放
+  const maxZoom = isLargeFile.value ? 3.0 : 6.0
+  
   const oldZoom = zoomLevel.value
-  const newZoom = Math.max(0.25, Math.min(3.0, oldZoom * scaleFactor))
+  const newZoom = Math.max(0.25, Math.min(maxZoom, oldZoom * scaleFactor))
   
   if (newZoom === oldZoom) return // 没有变化就不处理
   
@@ -381,8 +422,10 @@ const fitToWidth = () => {
   if (!pdfContainer.value) return
   
   const containerWidth = pdfContainer.value.clientWidth - 100
-  zoomLevel.value = containerWidth / baseWidth.value
-  pdfWidth.value = containerWidth
+  const calculatedZoom = containerWidth / baseWidth.value
+  const maxZoom = isLargeFile.value ? 3.0 : 6.0
+  zoomLevel.value = Math.max(0.25, Math.min(maxZoom, calculatedZoom))
+  pdfWidth.value = baseWidth.value * zoomLevel.value
   resetPan() // 重置平移
   emit('zoomChange', zoomLevel.value)
 }
@@ -398,7 +441,9 @@ const fitToPage = () => {
   const widthScale = containerWidth / baseWidth.value
   const heightScale = containerHeight / standardHeight
   
-  zoomLevel.value = Math.min(widthScale, heightScale)
+  const calculatedZoom = Math.min(widthScale, heightScale)
+  const maxZoom = isLargeFile.value ? 3.0 : 6.0
+  zoomLevel.value = Math.max(0.25, Math.min(maxZoom, calculatedZoom))
   pdfWidth.value = baseWidth.value * zoomLevel.value
   resetPan() // 重置平移
   emit('zoomChange', zoomLevel.value)
@@ -444,6 +489,17 @@ const handlePdfLoaded = async (doc: any) => {
     const viewport = page.getViewport({ scale: 1 })
     baseWidth.value = viewport.width
     
+    // 检测是否为大文件（基于宽度或页数）
+    const isLargeWidth = baseWidth.value > 2000
+    const isManyPages = totalPages.value > 20
+    isLargeFile.value = isLargeWidth || isManyPages
+    
+    // 如果是大文件，显示警告
+    if (isLargeFile.value) {
+      showLargeFileWarning.value = true
+      return // 等待用户选择
+    }
+    
     // 计算初始显示宽度
     if (pdfContainer.value) {
       const containerWidth = pdfContainer.value.clientWidth - 100
@@ -466,6 +522,27 @@ const handlePdfError = (error: any) => {
   error.value = error.message || '加载航图失败'
   isLoading.value = false
   emit('error', error.value)
+}
+
+// 大文件处理方法
+const handleUseIframeMode = () => {
+  useIframeMode.value = true
+  showLargeFileWarning.value = false
+}
+
+const handleUsePdfEmbed = () => {
+  showLargeFileWarning.value = false
+  // 继续使用vue-pdf-embed，设置初始宽度
+  if (pdfContainer.value) {
+    const containerWidth = pdfContainer.value.clientWidth - 100
+    zoomLevel.value = Math.min(containerWidth / baseWidth.value, 1.0)
+    pdfWidth.value = baseWidth.value * zoomLevel.value
+  } else {
+    pdfWidth.value = baseWidth.value * zoomLevel.value
+  }
+  
+  isLoading.value = false
+  emit('loaded', totalPages.value)
 }
 
 const handlePdfRendered = () => {
@@ -691,6 +768,10 @@ watch(() => props.src, (newSrc) => {
   if (newSrc) {
     isLoading.value = true
     error.value = ''
+    // 重置大文件相关状态
+    showLargeFileWarning.value = false
+    useIframeMode.value = false
+    isLargeFile.value = false
   }
 }, { immediate: true })
 
@@ -994,5 +1075,52 @@ defineExpose({
 
 .pdf-controls::-webkit-scrollbar-thumb:hover {
   background: var(--nav-text-secondary);
+}
+
+// 大文件警告样式
+.large-file-warning {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  height: 100%;
+  padding: 20vh var(--spacing-xl) var(--spacing-xl);
+  
+  .warning-content {
+    text-align: center;
+    max-width: 500px;
+    width: 100%;
+    
+    p {
+      margin: var(--spacing-sm) 0;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+    
+    .warning-actions {
+      display: flex;
+      gap: var(--spacing-md);
+      justify-content: center;
+      margin-top: var(--spacing-lg);
+      
+      @media (max-width: 767px) {
+        flex-direction: column;
+        align-items: center;
+      }
+    }
+  }
+}
+
+// iframe模式样式
+.iframe-mode {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  
+  .pdf-iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+    background: white;
+  }
 }
 </style>

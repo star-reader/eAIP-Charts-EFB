@@ -1,5 +1,5 @@
 <template>
-    <div class="airport-sub-nav">
+    <div class="enroute-sub-nav">
         <!-- Home按钮 -->
         <div class="home-section">
             <button class="home-btn" @click="goHome" aria-label="返回主页">
@@ -11,26 +11,12 @@
             </button>
         </div>
 
-        <!-- 机场选择下拉 -->
-        <div class="airport-selector">
-            <button class="airport-select-btn" @click="toggleAirportSelect" aria-label="选择机场">
-                <div class="selector-content">
-                    <span class="nav-icon">
-                        <Icon :size="iconSize">
-                            <LocationOutline />
-                        </Icon>
-                    </span>
-                    <span class="nav-label">{{ selectedAirport || '选择机场' }}</span>
-                </div>
-            </button>
-        </div>
-
-        <!-- 机场导航项 -->
+        <!-- 航路导航项 -->
         <div class="nav-section">
             <div class="nav-slider-container">
                 <!-- 导航按钮 -->
                 <div 
-                    v-for="(item, index) in airportNavItems" 
+                    v-for="(item, index) in enrouteNavItems" 
                     :key="item.id" 
                     class="nav-item"
                 >
@@ -39,7 +25,6 @@
                         :class="{ 'active': activeItem === item.id }"
                         @click="handleNavClick(item)" 
                         :aria-label="item.label"
-
                     >
                         <span class="nav-label">{{ item.label }}</span>
                         <span v-if="item.count !== null" class="nav-count">{{ item.count }}</span>
@@ -51,16 +36,13 @@
 </template>
 
 <script lang='ts' setup>
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { Icon } from '@vicons/utils'
 import pubsub from 'pubsub-js'
 import { 
-    HomeOutline,
-    LocationOutline,
-    ChevronDownOutline
+    HomeOutline
 } from '@vicons/ionicons5'
-import { getCategorizedChartsByICAO } from '@/services/storage/airportHelper'
 
 // Emits
 interface Emits {
@@ -77,48 +59,34 @@ const router = useRouter()
 interface Props {
     isMobile?: boolean
     activeItem?: string
-    selectedAirport?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
     isMobile: false,
-    activeItem: '',
-    selectedAirport: ''
+    activeItem: ''
 })
 
-const isAirportSelectOpen = ref(false)
-const chartsData = ref<CategorizedCharts | null>(null)
-const isLoadingCharts = ref(false)
+// 移除不需要的数据状态
 
 // Computed
 const iconSize = computed(() => props.isMobile ? '24' : '20')
 
-// 机场导航项 - 动态更新数量
-const airportNavItems = computed(() => [
+// 航路导航项
+const enrouteNavItems = computed(() => [
     {
-        id: 'airport-chart',
-        label: '机场',
-        count: chartsData.value?.airport?.length || 0,
+        id: 'enroute-chart',
+        label: '大图',
+        count: null,
     },
     {
-        id: 'departure',
-        label: '离场',
-        count: chartsData.value?.dep?.length || 0,
+        id: 'enroute-region',
+        label: '区域图',
+        count: null,
     },
     {
-        id: 'arrival',
-        label: '进场',
-        count: chartsData.value?.arr?.length || 0,
-    },
-    {
-        id: 'approach',
-        label: '进近',
-        count: chartsData.value?.app?.length || 0,
-    },
-    {
-        id: 'details',
-        label: '细则',
-        count: null, // 无数量显示
+        id: 'enroute-list',
+        label: '列表',
+        count: null,
     }
 ])
 
@@ -127,83 +95,50 @@ const goHome = () => {
     emit('goHome')
 }
 
-const toggleAirportSelect = () => {
-    // 广播打开机场选择器事件
-    pubsub.publish('show-airport-selection', {
-        selectedAirport: props.selectedAirport
-    })
-}
-
-const handleNavClick = (item: any) => {
+const handleNavClick = async (item: any) => {
    emit('navigate', item)
    
-   // 如果是细则，直接显示
-   if (item.id === 'details') {
-     // console.log('细则内容:', chartsData.value?.airport || [])
-     pubsub.publish('chart-ad-selected', chartsData.value?.ad)
-     return
+   if (item.id === 'enroute-chart') {
+       // 大图：直接加载ENR 6.2 航路图
+       try {
+           const { getEnrouteMainChart } = await import('@/services/storage/enrouteHelper.js')
+           const mainChart = await getEnrouteMainChart()
+           
+           if (mainChart) {
+               pubsub.publish('load-enroute-chart', mainChart)
+           } else {
+               console.warn('未找到ENR 6.2 航路图')
+               // 如果找不到特定图表，还是显示选择器
+               pubsub.publish('show-enroute-selection', {
+                   category: item.id
+               })
+           }
+       } catch (error) {
+           console.error('加载ENR 6.2 航路图失败:', error)
+           // 出错时显示选择器
+           pubsub.publish('show-enroute-selection', {
+               category: item.id
+           })
+       }
+   } else {
+       // 区域图和列表：显示选择器
+       pubsub.publish('show-enroute-selection', {
+           category: item.id
+       })
    }
-   
-   // 其他类别输出对应的航图内容到控制台
-   const categoryData = chartsData.value?.[item.id as keyof typeof chartsData.value]
-   
-   // 广播显示航图选择器事件
-   pubsub.publish('show-charts-selection', {
-       category: item.id,
-       selectedAirport: props.selectedAirport
-   })
 }
-
-// 加载机场航图数据
-const loadAirportCharts = async (icao: string) => {
-    if (!icao) {
-        chartsData.value = null
-        return
-    }
-
-    isLoadingCharts.value = true
-    try {
-        const data = await getCategorizedChartsByICAO(icao)
-        chartsData.value = data
-    } catch (error) {
-        chartsData.value = null
-    } finally {
-        isLoadingCharts.value = false
-    }
-}
-
-// 监听机场选择事件
-const handleAirportSelected = (message: string, airport: AirportList) => {
-    loadAirportCharts(airport.airporticao)
-}
-
-// 监听机场变化
-watch(() => props.selectedAirport, (newAirport) => {
-    if (newAirport) {
-        loadAirportCharts(newAirport)
-    } else {
-        chartsData.value = null
-    }
-}, { immediate: true })
 
 onMounted(() => {
-    // 订阅机场选择事件
-    pubsub.subscribe('airport-selected', handleAirportSelected)
-    
-    // 如果已有选中的机场，加载数据
-    if (props.selectedAirport) {
-        loadAirportCharts(props.selectedAirport)
-    }
+    // 初始化
 })
 
 onUnmounted(() => {
-    // 取消订阅
-    pubsub.unsubscribe('airport-selected')
+    // 清理工作
 })
 </script>
 
 <style lang='scss' scoped>
-.airport-sub-nav {
+.enroute-sub-nav {
     display: flex;
     flex-direction: column;
     height: 100%;
@@ -247,78 +182,7 @@ onUnmounted(() => {
         }
     }
 
-    .airport-selector {
-        padding: 0 var(--spacing-sm);
-        margin-bottom: var(--spacing-md);
-
-        .airport-select-btn {
-            width: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 8px;
-            background: rgba(255, 255, 255, 0.08);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: var(--radius-md);
-            color: var(--nav-text);
-            cursor: pointer;
-            transition: all 0.2s ease;
-            min-height: 38px;
-
-            &:hover {
-                background: rgba(255, 255, 255, 0.12);
-                border-color: rgba(255, 255, 255, 0.2);
-            }
-
-            &:active {
-                transform: translateY(0);
-            }
-
-            .selector-content {
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                gap: 2px;
-                flex: 1;
-
-                .nav-icon {
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    color: var(--nav-accent);
-                }
-
-                .nav-label {
-                    font-size: 9px;
-                    font-weight: 600;
-                    text-align: center;
-                    letter-spacing: 0.3px;
-                    color: var(--nav-text);
-                    white-space: nowrap;
-                    overflow: hidden;
-                    text-overflow: ellipsis;
-                    max-width: 100%;
-                }
-            }
-
-            .dropdown-arrow {
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                flex-shrink: 0;
-                color: var(--nav-text-secondary);
-                transition: all 0.2s ease;
-                
-                &:hover {
-                    color: var(--nav-accent);
-                }
-            }
-        }
-    }
-
     .nav-section {
-        // flex: 1;
-        // padding: 0 var(--spacing-sm);
         padding: 0px;
         display: flex;
         flex-direction: column;
@@ -330,9 +194,6 @@ onUnmounted(() => {
             flex-direction: column;
             gap: 4px;
             border-radius: 4px;
-            // padding: 6px;
-
-
 
             .nav-item {
                 position: relative;
@@ -361,7 +222,6 @@ onUnmounted(() => {
                     &:hover {
                         color: var(--nav-text);
                         background: rgba(255, 255, 255, 0.04);
-                        // transform: translateY(-1px);
                     }
 
                     &.active {
@@ -372,8 +232,6 @@ onUnmounted(() => {
                             color: #D2B48C;
                             font-weight: 600;
                         }
-
-                       
                     }
 
                     .nav-label {
@@ -412,26 +270,11 @@ onUnmounted(() => {
 
 // 移动端样式调整 - 保持和桌面端一致的布局
 @media (max-width: 767px) {
-    .airport-sub-nav {
+    .enroute-sub-nav {
         // 保持和桌面端相同的结构，只调整尺寸
         .home-section {
             .home-btn {
                 font-size: inherit; // 保持桌面端样式
-            }
-        }
-
-        .airport-selector {
-            .airport-select-btn {
-                .selector-content {
-                    .nav-label {
-                        font-size: 8px; // 稍微缩小字体
-                        white-space: nowrap;
-                        overflow: hidden;
-                        text-overflow: ellipsis;
-                        max-width: 100%;
-                        width: 100%;
-                    }
-                }
             }
         }
 
@@ -462,28 +305,8 @@ onUnmounted(() => {
 }
 
 @media (max-width: 480px) {
-    .airport-sub-nav {
+    .enroute-sub-nav {
         // 在极小屏幕上进一步缩小尺寸，但保持相同的布局结构
-        .airport-selector {
-            .airport-select-btn {
-                .selector-content {
-                    .nav-label {
-                        font-size: 7px; // 更小的字体
-                        white-space: nowrap;
-                        overflow: hidden;
-                        text-overflow: ellipsis;
-                        max-width: 100%;
-                        width: 100%;
-                    }
-                    
-                    .nav-icon {
-                        font-size: inherit; // 保持图标大小
-                        flex-shrink: 0;
-                    }
-                }
-            }
-        }
-
         .nav-section {
             .nav-slider-container {
                 .nav-item {
