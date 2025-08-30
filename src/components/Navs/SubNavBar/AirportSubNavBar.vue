@@ -139,7 +139,6 @@ const handleNavClick = (item: any) => {
    
    // 如果是细则，直接显示
    if (item.id === 'details') {
-     // console.log('细则内容:', chartsData.value?.airport || [])
      pubsub.publish('chart-ad-selected', chartsData.value?.ad)
      return
    }

@@ -75,7 +75,6 @@ const handleClose = () => {
 }
 
 const handleChartSelect = (chart: OfficialSUP) => {
-  console.log('SupSelection: handleChartSelect called with:', chart)
   emit('selectChart', chart)
 }
 </script>

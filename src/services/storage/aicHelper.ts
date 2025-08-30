@@ -19,7 +19,6 @@ export const getAicCharts = async (): Promise<OfficialAIC[]> => {
     )
     
   } catch (error) {
-    console.error('Failed to get aic charts:', error)
     throw new Error('无法获取AIC列表')
   }
 }

@@ -36,11 +36,9 @@ const getTitleInfo = (chart: OfficialENR) => {
 
 // Extra event handler for direct chart loading
 const handleLoadEnrouteChart = (message: string, chart: OfficialENR) => {
-  console.log('直接加载ENR航路图:', chart)
   if (baseViewRef.value) {
     baseViewRef.value.loadChart(chart)
   }
-  console.log('PDF URL will be:', import.meta.env.VITE_API_HOST + '/data' + chart.pdfPath)
 }
 
 // Extra pubsub events
