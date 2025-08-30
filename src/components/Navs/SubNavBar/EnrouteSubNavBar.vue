@@ -94,4 +94,8 @@ const handleNavClick = async (item: any) => {
 }
 </script>
 
+<style lang='scss' scoped>
+@import '@/styles/subnavbar-common.scss';
+</style>
+
 
