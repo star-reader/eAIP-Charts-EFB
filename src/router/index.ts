@@ -3,6 +3,7 @@ import AirportView from '@/pages/AirportView.vue'
 import AirportsPage from '@/pages/AirportView.vue'
 import EnrouteView from '@/pages/EnrouteView.vue'
 import SupView from '@/pages/SupView.vue'
+import AicView from '@/pages/AicView.vue'
 import HomeView from '@/pages/HomeView.vue'
 
 const router = createRouter({
@@ -41,6 +42,15 @@ const router = createRouter({
       meta: {
         keepAlive: true,
         title: 'SUP'
+      }
+    },
+    {
+      path: '/aic',
+      name: 'AicView',
+      component: AicView,
+      meta: {
+        keepAlive: true,
+        title: 'AIC'
       }
     }
   ],

@@ -78,6 +78,24 @@
                     @navigate="handleSubNavClick"
                 />
             </div>
+
+            <!-- AIC子导航 -->
+            <div
+                v-show="currentPage === 'aic'"
+                class="sub-nav-container"
+                :class="{ 
+                    'slide-in-right': showSubNav,
+                    'slide-out-right': !showSubNav,
+                    'animating': isAnimating 
+                }"
+            >
+                <AicSubNavBar 
+                    :is-mobile="isMobile"
+                    :active-item="activeSubItem"
+                    @go-home="goHome"
+                    @navigate="handleSubNavClick"
+                />
+            </div>
         </nav>
     </NavBarContainer>
 </template>
@@ -100,6 +118,7 @@ import NavBarContainer from './NavBarContainer.vue'
 import AirportSubNavBar from './SubNavBar/AirportSubNavBar.vue'
 import EnrouteSubNavBar from './SubNavBar/EnrouteSubNavBar.vue'
 import SupSubNavBar from './SubNavBar/SupSubNavBar.vue'
+import AicSubNavBar from './SubNavBar/AicSubNavBar.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -232,7 +251,7 @@ watch(isHome, (newValue, oldValue) => {
             
             // 稍微延迟显示子导航，让主导航先开始滑出
             setTimeout(() => {
-                if (currentPage.value === 'airports' || currentPage.value === 'enroute' || currentPage.value === 'sup') {
+                if (currentPage.value === 'airports' || currentPage.value === 'enroute' || currentPage.value === 'sup' || currentPage.value === 'aic') {
                     showSubNav.value = true
                 }
             }, 100)
@@ -279,6 +298,13 @@ watch(() => currentPage.value, (newPage) => {
         // 为SUP子导航设置默认选中项
         if (!activeSubItem.value) {
             activeSubItem.value = 'sup-list'
+        }
+    } else if (newPage === 'aic') {
+        // 确保子导航显示
+        showSubNav.value = true
+        // 为AIC子导航设置默认选中项
+        if (!activeSubItem.value) {
+            activeSubItem.value = 'aic-list'
         }
     } else if (newPage === 'home') {
         showSubNav.value = false
