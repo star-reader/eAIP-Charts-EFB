@@ -265,7 +265,7 @@ defineExpose({
     opacity: 1;
   }
 
-  // 桌面端样式 - iPadOS弹出效果
+  // 桌面端样式 - 简洁显示效果
   &.desktop {
     position: fixed;
     top: var(--header-height);
@@ -274,13 +274,13 @@ defineExpose({
     height: calc(100vh - var(--header-height) - 40px);
     margin: var(--spacing-lg) 0;
     
-    // 桌面端动画：从左侧滑入 + 弹性效果
-    transform: translateX(-100%) scale(0.95);
+    // 桌面端动画：轻微缩放显示
+    transform: scale(0.95);
     
     &.show {
-      transform: translateX(0) scale(1);
+      transform: scale(1);
       opacity: 1;
-      animation: desktopBounceIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      animation: desktopFadeIn 0.2s ease-out;
     }
     
     @media (min-width: 1920px) {
@@ -529,22 +529,14 @@ defineExpose({
   animation: fadeIn 0.3s ease forwards;
 }
 
-// 桌面端弹出动画 - iPadOS风格
-@keyframes desktopBounceIn {
+// 桌面端显示动画 - 简洁淡入
+@keyframes desktopFadeIn {
   0% {
-    transform: translateX(-100%) scale(0.8);
+    transform: scale(0.95);
     opacity: 0;
   }
-  60% {
-    transform: translateX(10px) scale(1.05);
-    opacity: 0.8;
-  }
-  80% {
-    transform: translateX(-5px) scale(0.98);
-    opacity: 0.9;
-  }
   100% {
-    transform: translateX(0) scale(1);
+    transform: scale(1);
     opacity: 1;
   }
 }
