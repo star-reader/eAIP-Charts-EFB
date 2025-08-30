@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import AirportView from '@/pages/AirportView.vue'
 import AirportsPage from '@/pages/AirportView.vue'
 import EnrouteView from '@/pages/EnrouteView.vue'
+import SupView from '@/pages/SupView.vue'
 import HomeView from '@/pages/HomeView.vue'
 
 const router = createRouter({
@@ -31,6 +32,15 @@ const router = createRouter({
       meta: {
         keepAlive: true,
         title: '航路图'
+      }
+    },
+    {
+      path: '/sup',
+      name: 'SupView',
+      component: SupView,
+      meta: {
+        keepAlive: true,
+        title: 'SUP'
       }
     }
   ],

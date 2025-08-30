@@ -44,7 +44,11 @@ type OfficialSUP = {
     "IS_MODIFIED": string,
     "Effective_Time": string,
     "Out_Date": string,
-    "Pub_Date": string
+    "Pub_Date": string,
+    "pdfPath"?: string,
+    "name_cn"?: string,
+    "name_en"?: string,
+    "Section"?: string
 }
 
 type OfficialAMDT = {

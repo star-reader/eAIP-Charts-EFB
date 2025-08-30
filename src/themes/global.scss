@@ -154,7 +154,7 @@ body {
 }
 
 [data-theme="night"] {
-  .vue-pdf-embed__page{
+  .vue-pdf-embed__page, iframe{
     filter: invert(90%) contrast(130%) brightness(80%) hue-rotate(180deg);
   }
 }
