@@ -246,5 +246,370 @@ defineExpose({
 </script>
 
 <style lang='scss' scoped>
-@import '@/styles/selection-common.scss';
+.charts-selection-wrapper {
+  position: relative;
+  z-index: var(--z-modal);
+}
+
+.charts-selection {
+  background: var(--secondary-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-heavy);
+  display: flex;
+  flex-direction: column;
+  opacity: 0;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  
+  &.show {
+    opacity: 1;
+  }
+
+  // 桌面端样式 - iPadOS弹出效果
+  &.desktop {
+    position: fixed;
+    top: var(--header-height);
+    left: var(--nav-width-sidebar-md);
+    width: 360px;
+    height: calc(100vh - var(--header-height) - 40px);
+    margin: var(--spacing-lg) 0;
+    
+    // 桌面端动画：从左侧滑入 + 弹性效果
+    transform: translateX(-100%) scale(0.95);
+    
+    &.show {
+      transform: translateX(0) scale(1);
+      opacity: 1;
+      animation: desktopBounceIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    
+    @media (min-width: 1920px) {
+      left: var(--nav-width-sidebar-xl);
+    }
+    
+    @media (min-width: 1440px) and (max-width: 1919px) {
+      left: var(--nav-width-sidebar-lg);
+    }
+    
+    @media (min-width: 768px) and (max-width: 1023px) {
+      width: 320px;
+      left: var(--nav-width-sidebar-sm);
+    }
+  }
+
+  // 移动端样式 - floating panel效果
+  &.mobile {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    top: auto;
+    width: 100%;
+    height: 75vh;
+    max-height: 75vh;
+    z-index: calc(var(--z-modal) + 1);
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    
+    // 移动端动画：从底部滑入
+    transform: translateY(100%);
+    
+    &.show {
+      transform: translateY(0);
+      opacity: 1;
+      animation: mobileSlideUp 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    }
+  }
+
+  .selection-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--spacing-md) var(--spacing-lg) var(--spacing-sm);
+    border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
+
+    .header-title {
+      font-size: var(--font-size-md);
+      font-weight: 600;
+      color: var(--text-primary);
+      margin: 0;
+    }
+
+    .close-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      background: transparent;
+      border: none;
+      border-radius: var(--radius-md);
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.2s ease;
+
+      &:hover {
+        background: var(--hover-bg);
+        color: var(--text-primary);
+      }
+    }
+  }
+
+  .charts-list-container {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+
+    .loading-state,
+    .error-state,
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: var(--spacing-lg);
+      text-align: center;
+      flex: 1;
+
+      .loading-text,
+      .error-text,
+      .empty-text {
+        margin-top: var(--spacing-sm);
+        color: var(--text-secondary);
+        font-size: var(--font-size-sm);
+      }
+
+      .error-icon,
+      .empty-icon {
+        color: var(--text-muted);
+        margin-bottom: var(--spacing-sm);
+      }
+
+      .retry-btn {
+        margin-top: var(--spacing-md);
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-xs);
+        padding: var(--spacing-xs) var(--spacing-sm);
+        background: var(--primary-blue);
+        color: var(--text-inverse);
+        border: none;
+        border-radius: var(--radius-sm);
+        font-size: var(--font-size-xs);
+        cursor: pointer;
+        transition: all 0.2s ease;
+
+        &:hover {
+          background: var(--secondary-blue);
+        }
+      }
+    }
+
+    .charts-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: var(--spacing-xs) 0;
+
+      .section-group {
+        margin-bottom: var(--spacing-md);
+
+        .section-header {
+          display: flex;
+          align-items: center;
+          gap: var(--spacing-sm);
+          padding: var(--spacing-sm) var(--spacing-lg);
+          margin: 0 var(--spacing-sm);
+          background: var(--hover-bg);
+          border-radius: var(--radius-md);
+          cursor: pointer;
+          transition: all 0.2s ease;
+
+          &:hover {
+            background: var(--nav-active-bg);
+          }
+
+          .section-icon {
+            color: var(--text-secondary);
+            transition: transform 0.2s ease;
+
+            &.expanded {
+              transform: rotate(90deg);
+            }
+          }
+
+          .section-title {
+            flex: 1;
+            color: var(--text-primary);
+            font-weight: 500;
+            font-size: var(--font-size-sm);
+          }
+
+          .section-count {
+            color: var(--text-secondary);
+            font-size: var(--font-size-xs);
+            background: rgba(255, 255, 255, 0.1);
+            padding: 2px 6px;
+            border-radius: 10px;
+          }
+        }
+
+        .section-charts {
+          margin-top: var(--spacing-sm);
+          padding-left: var(--spacing-lg);
+        }
+      }
+
+      .chart-item {
+        display: flex;
+        align-items: center;
+        padding: var(--spacing-sm) var(--spacing-lg);
+        margin: 0 var(--spacing-sm);
+        cursor: pointer;
+        transition: all 0.2s ease;
+        border: 2px solid transparent;
+        border-bottom: 1px solid rgba(0,0,0,0.04);
+
+        &:hover {
+          background: var(--hover-bg);
+        }
+
+        &.modified {
+          position: relative;
+
+          &::after {
+            content: '';
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            width: 6px;
+            height: 6px;
+            background: var(--warning-yellow);
+            border-radius: 50%;
+          }
+        }
+
+        &.section-chart-item {
+          padding: var(--spacing-xs) var(--spacing-md);
+          margin: 0 var(--spacing-xs);
+        }
+
+        .chart-info {
+          flex: 1;
+
+          .chart-name {
+            font-size: var(--font-size-sm);
+            font-weight: 500;
+            color: var(--text-primary);
+            margin-bottom: 2px;
+            line-height: 1.3;
+          }
+
+          .chart-subtitle {
+            font-size: var(--font-size-xs);
+            color: var(--text-secondary);
+            line-height: 1.2;
+          }
+        }
+      }
+    }
+  }
+}
+
+.mobile-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(2px);
+  z-index: var(--z-modal);
+  opacity: 0;
+  animation: fadeIn 0.3s ease forwards;
+}
+
+// 桌面端弹出动画 - iPadOS风格
+@keyframes desktopBounceIn {
+  0% {
+    transform: translateX(-100%) scale(0.8);
+    opacity: 0;
+  }
+  60% {
+    transform: translateX(10px) scale(1.05);
+    opacity: 0.8;
+  }
+  80% {
+    transform: translateX(-5px) scale(0.98);
+    opacity: 0.9;
+  }
+  100% {
+    transform: translateX(0) scale(1);
+    opacity: 1;
+  }
+}
+
+// 移动端滑入动画 - floating panel风格
+@keyframes mobileSlideUp {
+  0% {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeIn {
+  to {
+    opacity: 1;
+  }
+}
+
+// 滚动条样式优化
+.charts-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.charts-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.charts-list::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 3px;
+}
+
+.charts-list::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+// 响应式调整
+@media (max-width: 767px) {
+  .charts-selection {
+    .selection-header {
+      padding: var(--spacing-sm) var(--spacing-md);
+      
+      .header-title {
+        font-size: var(--font-size-sm);
+      }
+    }
+
+    .charts-list .chart-item {
+      padding: var(--spacing-xs) var(--spacing-md);
+      margin: 0 var(--spacing-xs);
+
+      .chart-info {
+        .chart-name {
+          font-size: var(--font-size-sm);
+        }
+
+        .chart-subtitle {
+          font-size: var(--font-size-xs);
+        }
+      }
+    }
+  }
+}
 </style>

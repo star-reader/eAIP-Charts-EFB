@@ -53,10 +53,6 @@ const handleNavigate = (item: any) => {
 }
 
 const handleNavClick = async (item: any) => {
-   console.log('SupSubNavBar: handleNavClick called with:', item)
-   
-   // 列表：显示选择器
-   console.log('SupSubNavBar: publishing show-sup-selection event')
    pubsub.publish('show-sup-selection', {
        category: item.id
    })
