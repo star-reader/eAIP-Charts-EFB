@@ -171,19 +171,19 @@ const navItems = ref([
         icon: markRaw(MapOutline),
         route: '/enroute'
     },
-    {
-        id: 'amdt',
-        label: 'AMDT',
-        icon: markRaw(BookmarkOutline),
-        route: '/amdt'
-    },
     // todo SUP的JSON结构整理
     // {
-    //     id: 'sup',
-    //     label: 'SUP',
-    //     icon: markRaw(AddCircleOutline),
-    //     route: '/sup'
+    //     id: 'amdt',
+    //     label: 'AMDT',
+    //     icon: markRaw(BookmarkOutline),
+    //     route: '/amdt'
     // },
+    {
+        id: 'sup',
+        label: 'SUP',
+        icon: markRaw(AddCircleOutline),
+        route: '/sup'
+    },
     {
         id: 'aic',
         label: 'AIC',
