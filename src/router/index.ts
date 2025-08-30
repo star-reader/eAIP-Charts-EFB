@@ -4,6 +4,7 @@ import AirportsPage from '@/pages/AirportView.vue'
 import EnrouteView from '@/pages/EnrouteView.vue'
 import SupView from '@/pages/SupView.vue'
 import AicView from '@/pages/AicView.vue'
+import NotamView from '@/pages/NotamView.vue'
 import HomeView from '@/pages/HomeView.vue'
 
 const router = createRouter({
@@ -51,6 +52,15 @@ const router = createRouter({
       meta: {
         keepAlive: true,
         title: 'AIC'
+      }
+    },
+    {
+      path: '/notam',
+      name: 'NotamView',
+      component: NotamView,
+      meta: {
+        keepAlive: true,
+        title: 'NOTAM'
       }
     }
   ],

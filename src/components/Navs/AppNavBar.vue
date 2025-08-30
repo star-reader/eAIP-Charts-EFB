@@ -96,6 +96,24 @@
                     @navigate="handleSubNavClick"
                 />
             </div>
+
+            <!-- NOTAM子导航 -->
+            <div
+                v-show="currentPage === 'notam'"
+                class="sub-nav-container"
+                :class="{ 
+                    'slide-in-right': showSubNav,
+                    'slide-out-right': !showSubNav,
+                    'animating': isAnimating 
+                }"
+            >
+                <NotamSubNavBar 
+                    :is-mobile="isMobile"
+                    :active-item="activeSubItem"
+                    @go-home="goHome"
+                    @navigate="handleSubNavClick"
+                />
+            </div>
         </nav>
     </NavBarContainer>
 </template>
@@ -119,6 +137,7 @@ import AirportSubNavBar from './SubNavBar/AirportSubNavBar.vue'
 import EnrouteSubNavBar from './SubNavBar/EnrouteSubNavBar.vue'
 import SupSubNavBar from './SubNavBar/SupSubNavBar.vue'
 import AicSubNavBar from './SubNavBar/AicSubNavBar.vue'
+import NotamSubNavBar from './SubNavBar/NotamSubNavBar.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -158,12 +177,13 @@ const navItems = ref([
         icon: markRaw(BookmarkOutline),
         route: '/amdt'
     },
-    {
-        id: 'sup',
-        label: 'SUP',
-        icon: markRaw(AddCircleOutline),
-        route: '/sup'
-    },
+    // todo SUP的JSON结构整理
+    // {
+    //     id: 'sup',
+    //     label: 'SUP',
+    //     icon: markRaw(AddCircleOutline),
+    //     route: '/sup'
+    // },
     {
         id: 'aic',
         label: 'AIC',
@@ -175,12 +195,6 @@ const navItems = ref([
         label: 'NOTAM',
         icon: markRaw(DocumentTextOutline),
         route: '/notam'
-    },
-    {
-        id: 'pdf-demo',
-        label: 'PDF演示',
-        icon: markRaw(DocumentAttachOutline),
-        route: '/pdf-demo'
     }
 ])
 
@@ -251,7 +265,7 @@ watch(isHome, (newValue, oldValue) => {
             
             // 稍微延迟显示子导航，让主导航先开始滑出
             setTimeout(() => {
-                if (currentPage.value === 'airports' || currentPage.value === 'enroute' || currentPage.value === 'sup' || currentPage.value === 'aic') {
+                if (currentPage.value === 'airports' || currentPage.value === 'enroute' || currentPage.value === 'sup' || currentPage.value === 'aic' || currentPage.value === 'notam') {
                     showSubNav.value = true
                 }
             }, 100)
@@ -305,6 +319,13 @@ watch(() => currentPage.value, (newPage) => {
         // 为AIC子导航设置默认选中项
         if (!activeSubItem.value) {
             activeSubItem.value = 'aic-list'
+        }
+    } else if (newPage === 'notam') {
+        // 确保子导航显示
+        showSubNav.value = true
+        // 为NOTAM子导航设置默认选中项
+        if (!activeSubItem.value) {
+            activeSubItem.value = 'notam-list'
         }
     } else if (newPage === 'home') {
         showSubNav.value = false
