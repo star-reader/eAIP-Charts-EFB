@@ -306,6 +306,7 @@ const getZoomScaleFactor = (direction: 'in' | 'out'): number => {
 const showLargeFileWarning = ref(false)
 const useIframeMode = ref(false)
 const isLargeFile = ref(false)
+const userConfirmedLargeFile = ref(false) // 用户已确认大文件处理方式
 
 // 平移和手势控制状态
 const panX = ref(0) // X轴平移距离
@@ -511,7 +512,11 @@ const downloadPDF = () => {
 
 // 应用默认缩放设置
 const applyDefaultZoom = () => {
-  if (!pdfContainer.value) return
+  if (!pdfContainer.value || baseWidth.value <= 0) {
+    // 如果容器或基础宽度未准备好，使用默认值
+    pdfWidth.value = baseWidth.value * zoomLevel.value
+    return
+  }
   
   switch (defaultZoomSetting.value) {
     case 'fit-width':
@@ -547,13 +552,13 @@ const handlePdfLoaded = async (doc: any) => {
     baseWidth.value = viewport.width
     
     // 检测是否为大文件（基于宽度或页数）
-    const isLargeWidth = baseWidth.value > 3000
+    const isLargeWidth = baseWidth.value > 2000
     // 优化：机场AD也会显示大文件，其实是不对的，具体原因是页数太多，ENC只有一页；所以这里判断largeWidth后也要判断页数等于1
     // const isManyPages = totalPages.value > 20
     isLargeFile.value = isLargeWidth && totalPages.value == 1
     
-    // 如果是大文件，显示警告
-    if (isLargeFile.value) {
+    // 如果是大文件且用户还未确认处理方式，显示警告
+    if (isLargeFile.value && !userConfirmedLargeFile.value) {
       showLargeFileWarning.value = true
       return // 等待用户选择
     }
@@ -580,12 +585,25 @@ const handlePdfError = (error: any) => {
 const handleUseIframeMode = () => {
   useIframeMode.value = true
   showLargeFileWarning.value = false
+  userConfirmedLargeFile.value = true
 }
 
-const handleUsePdfEmbed = () => {
+const handleUsePdfEmbed = async () => {
   showLargeFileWarning.value = false
+  userConfirmedLargeFile.value = true
+  
+  // 等待 DOM 更新
+  await nextTick()
+  
   // 继续使用vue-pdf-embed，应用用户设置的默认缩放
-  applyDefaultZoom()
+  if (pdfContainer.value && baseWidth.value > 0) {
+    applyDefaultZoom()
+  } else {
+    // 如果容器还未准备好，使用安全的默认值
+    const containerWidth = 800 // 假设的默认容器宽度
+    zoomLevel.value = Math.min(containerWidth / baseWidth.value, 1.0)
+    pdfWidth.value = baseWidth.value * zoomLevel.value
+  }
   
   isLoading.value = false
   emit('loaded', totalPages.value)
@@ -785,6 +803,7 @@ watch(() => props.src, (newSrc) => {
     showLargeFileWarning.value = false
     useIframeMode.value = false
     isLargeFile.value = false
+    userConfirmedLargeFile.value = false // 重置用户确认标志
   }
 }, { immediate: true })
 
