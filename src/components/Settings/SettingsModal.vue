@@ -151,6 +151,21 @@
                   <span class="info-label">版本</span>
                   <span class="info-value">1.0.0</span>
                 </div>
+                
+                <!-- GitHub 链接 -->
+                <div class="github-link">
+                  <a 
+                    href="https://github.com/star-reader/eAIP-Charts-EFB" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    class="github-btn"
+                  >
+                    <Icon size="20">
+                      <LogoGithub />
+                    </Icon>
+                    <span>GitHub</span>
+                  </a>
+                </div>
               </div>
             </section>
           </div>
@@ -171,7 +186,8 @@ import {
   DownloadOutline,
   TrashOutline,
   ColorPaletteOutline,
-  InformationCircleOutline
+  InformationCircleOutline,
+  LogoGithub
 } from '@vicons/ionicons5'
 import { 
   getLocalVersion, 
@@ -399,11 +415,11 @@ onMounted(() => {
 .modal-content {
   flex: 1;
   overflow-y: auto;
-  padding: var(--spacing-md);
+  padding: var(--spacing-xs) var(--spacing-md);
 }
 
 .settings-section {
-  margin-bottom: var(--spacing-lg);
+  margin-bottom: var(--spacing-sm);
   
   &:last-child {
     margin-bottom: 0;
@@ -412,17 +428,17 @@ onMounted(() => {
   .section-title {
     display: flex;
     align-items: center;
-    gap: var(--spacing-sm);
-    font-size: var(--font-size-md);
+    gap: var(--spacing-xs);
+    font-size: var(--font-size-sm);
     font-weight: 600;
     color: var(--text-primary);
-    margin: 0 0 var(--spacing-md);
-    padding-bottom: var(--spacing-sm);
+    margin: 0 0 var(--spacing-xs);
+    padding-bottom: 2px;
     border-bottom: 1px solid var(--border-color);
   }
   
   .section-content {
-    padding: 0 var(--spacing-sm);
+    padding: 0;
   }
 }
 
@@ -430,7 +446,7 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: var(--spacing-sm) 0;
+  padding: 6px 0;
   
   .info-label {
     color: var(--text-secondary);
@@ -455,19 +471,19 @@ onMounted(() => {
 .action-buttons {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--spacing-sm);
-  margin-top: var(--spacing-md);
+  gap: var(--spacing-xs);
+  margin-top: var(--spacing-sm);
   
   .action-btn {
     display: flex;
     align-items: center;
     gap: var(--spacing-xs);
-    padding: var(--spacing-sm) var(--spacing-md);
+    padding: 6px var(--spacing-sm);
     background: var(--hover-bg);
     border: 1px solid var(--border-color);
     border-radius: var(--radius-md);
     color: var(--text-primary);
-    font-size: var(--font-size-sm);
+    font-size: var(--font-size-xs);
     cursor: pointer;
     transition: all 0.2s ease;
     
@@ -502,27 +518,27 @@ onMounted(() => {
 }
 
 .progress-section {
-  margin-top: var(--spacing-md);
-  padding: var(--spacing-md);
+  margin-top: var(--spacing-sm);
+  padding: var(--spacing-sm);
   background: var(--hover-bg);
   border-radius: var(--radius-md);
   
   .progress-text {
-    font-size: var(--font-size-sm);
+    font-size: var(--font-size-xs);
     color: var(--text-primary);
-    margin-bottom: var(--spacing-sm);
+    margin-bottom: var(--spacing-xs);
   }
   
   .progress-bar {
-    height: 6px;
+    height: 4px;
     background: var(--border-color);
-    border-radius: 3px;
+    border-radius: 2px;
     overflow: hidden;
     
     .progress-fill {
       height: 100%;
       background: var(--primary-blue);
-      border-radius: 3px;
+      border-radius: 2px;
       transition: width 0.3s ease;
     }
   }
@@ -530,14 +546,14 @@ onMounted(() => {
   .progress-detail {
     font-size: var(--font-size-xs);
     color: var(--text-secondary);
-    margin-top: var(--spacing-xs);
+    margin-top: 4px;
     text-align: right;
   }
 }
 
 .status-message {
-  padding: var(--spacing-sm);
-  font-size: var(--font-size-sm);
+  padding: 6px var(--spacing-sm);
+  font-size: var(--font-size-xs);
   
   &.success {
     color: var(--success-green);
@@ -556,7 +572,7 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: var(--spacing-sm) 0;
+  padding: 6px 0;
   border-bottom: 1px solid var(--divider-color);
   
   &:last-child {
@@ -569,13 +585,13 @@ onMounted(() => {
     gap: 2px;
     
     .setting-label {
-      font-size: var(--font-size-sm);
+      font-size: var(--font-size-xs);
       color: var(--text-primary);
       font-weight: 500;
     }
     
     .setting-desc {
-      font-size: var(--font-size-xs);
+      font-size: 11px;
       color: var(--text-secondary);
     }
   }
@@ -631,6 +647,38 @@ onMounted(() => {
     .switch-thumb {
       transform: translateX(20px);
       color: var(--primary-blue);
+    }
+  }
+}
+
+.github-link {
+  margin-top: var(--spacing-sm);
+  padding-top: var(--spacing-sm);
+  border-top: 1px solid var(--divider-color);
+  display: flex;
+  justify-content: center;
+  
+  .github-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    padding: 6px var(--spacing-sm);
+    background: var(--secondary-bg);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+    text-decoration: none;
+    font-size: var(--font-size-xs);
+    transition: all 0.2s ease;
+    
+    &:hover {
+      background: var(--hover-bg);
+      border-color: var(--text-primary);
+      transform: translateY(-1px);
+    }
+    
+    &:active {
+      transform: translateY(0);
     }
   }
 }
