@@ -7,6 +7,17 @@
 
     <div class="header-right">
       <button 
+        v-if="showInstallButton"
+        class="action-btn install-btn"
+        @click="handleInstall"
+        aria-label="安装应用"
+      >
+        <Icon size="20">
+          <DownloadOutline />
+        </Icon>
+      </button>
+
+      <button 
         class="action-btn theme-toggle"
         @click="toggleTheme"
         :aria-label="isDarkTheme ? 'Switch to day mode' : 'Switch to night mode'"
@@ -48,7 +59,8 @@ import {
   SunnyOutline, 
   MoonOutline, 
   ScanOutline, 
-  SettingsOutline 
+  SettingsOutline,
+  DownloadOutline
 } from '@vicons/ionicons5'
 
 // Props
@@ -75,7 +87,54 @@ const emit = defineEmits<Emits>()
 // State
 const _theme = localStorage.getItem('theme')
 const isDarkTheme = ref(_theme === 'night')
+const showInstallButton = ref(false)
+const deferredPrompt = ref<any>(null)
 
+// PWA 安装相关
+const setupPWAInstall = () => {
+  // 监听 beforeinstallprompt 事件
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault()
+    deferredPrompt.value = e
+    showInstallButton.value = true
+  })
+
+  // 监听安装完成事件
+  window.addEventListener('appinstalled', () => {
+    showInstallButton.value = false
+    deferredPrompt.value = null
+  })
+
+  // 检查是否已经安装
+  if (window.matchMedia('(display-mode: standalone)').matches) {
+    showInstallButton.value = false
+  } else {
+    // 如果浏览器不支持 beforeinstallprompt，也显示按钮
+    // 用户可以手动通过浏览器菜单安装
+    setTimeout(() => {
+      if (!deferredPrompt.value) {
+        showInstallButton.value = true
+      }
+    }, 1000)
+  }
+}
+
+const handleInstall = async () => {
+  if (deferredPrompt.value) {
+    // 使用浏览器原生安装提示
+    deferredPrompt.value.prompt()
+    const { outcome } = await deferredPrompt.value.userChoice
+    
+    if (outcome === 'accepted') {
+      showInstallButton.value = false
+    }
+    
+    deferredPrompt.value = null
+  } else {
+    // 浏览器不支持原生安装提示，发布事件让父组件显示提示
+    pubsub.publish('show-install-guide')
+  }
+}
 
 const openSettings = () => {
   emit('openSettings')
@@ -97,6 +156,9 @@ const toggleFullscreen = () => {
   }
 }
 
+onMounted(() => {
+  setupPWAInstall()
+})
 </script>
 
 <style lang="scss" scoped>
@@ -212,6 +274,10 @@ const toggleFullscreen = () => {
 
       &.settings-btn:hover {
         color: var(--primary-blue);
+      }
+
+      &.install-btn:hover {
+        color: var(--success-green);
       }
     }
   }
