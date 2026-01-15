@@ -27,7 +27,7 @@
         </Icon>
       </button>
 
-      <!-- <button 
+      <button 
         class="action-btn settings-btn"
         @click="openSettings"
         aria-label="Settings"
@@ -35,7 +35,7 @@
         <Icon size="20">
           <SettingsOutline />
         </Icon>
-      </button> -->
+      </button>
     </div>
   </header>
 </template>
@@ -43,6 +43,7 @@
 <script lang="ts" setup>
 import { onMounted, ref } from 'vue'
 import { Icon } from '@vicons/utils'
+import pubsub from 'pubsub-js'
 import { 
   SunnyOutline, 
   MoonOutline, 
@@ -82,8 +83,10 @@ const openSettings = () => {
 
 const toggleTheme = () => {
   isDarkTheme.value = !isDarkTheme.value
-  document.documentElement.setAttribute('data-theme', isDarkTheme.value ? 'night' : 'light')
-  localStorage.setItem('theme', isDarkTheme.value ? 'night' : 'light')
+  const theme = isDarkTheme.value ? 'night' : 'light'
+  document.documentElement.setAttribute('data-theme', theme)
+  localStorage.setItem('theme', theme)
+  pubsub.publish('theme-changed', theme)
 }
 
 const toggleFullscreen = () => {

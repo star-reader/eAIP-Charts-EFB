@@ -1,41 +1,54 @@
 <template>
-  <div class="app-layout">
-    <!-- Application Header -->
-    <AppHeader
-      :title="pageTitle"
-      :subtitle="pageSubtitle"
-      @open-settings="openSettings"
-    />
+  <NConfigProvider :theme="naiveTheme">
+    <NDialogProvider>
+      <div class="app-layout">
+        <!-- Application Header -->
+        <AppHeader
+          :title="pageTitle"
+          :subtitle="pageSubtitle"
+          @open-settings="openSettings"
+        />
 
-    <AppNavBar />
+        <AppNavBar />
 
-    <main 
-      class="main-content"
-      :class="{ 
-        'nav-open': isNavOpen,
-        'mobile': isMobile
-      }"
-    >
-      <div class="content-container">
-        <!-- Router View for page content -->
-        <router-view v-slot="{ Component, route }">
-          <transition name="page" mode="out-in">
-            <keep-alive>
-              <component :is="Component" :key="route.fullPath" />
-            </keep-alive>
-          </transition>
-        </router-view>
+        <main 
+          class="main-content"
+          :class="{ 
+            'nav-open': isNavOpen,
+            'mobile': isMobile
+          }"
+        >
+          <div class="content-container">
+            <!-- Router View for page content -->
+            <router-view v-slot="{ Component, route }">
+              <transition name="page" mode="out-in">
+                <keep-alive>
+                  <component :is="Component" :key="route.fullPath" />
+                </keep-alive>
+              </transition>
+            </router-view>
+          </div>
+        </main>
+
+        <!-- Settings Modal -->
+        <SettingsModal 
+          :visible="isSettingsOpen" 
+          @update:visible="isSettingsOpen = $event"
+          @close="isSettingsOpen = false"
+        />
       </div>
-    </main>
-  </div>
+    </NDialogProvider>
+  </NConfigProvider>
 </template>
 
 <script lang="ts" setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { NDialogProvider, NConfigProvider, darkTheme } from 'naive-ui'
 import pubsub from 'pubsub-js'
 import { useRouter, useRoute } from 'vue-router'
 import AppHeader from '@/components/Navs/AppHeader.vue'
 import AppNavBar from '@/components/Navs/AppNavBar.vue'
+import SettingsModal from '@/components/Settings/SettingsModal.vue'
 
 // Router
 const router = useRouter()
@@ -44,6 +57,11 @@ const router = useRouter()
 const isNavOpen = ref(false)
 const isMobile = ref(false)
 const isOnline = ref(navigator.onLine)
+const isSettingsOpen = ref(false)
+const isDarkTheme = ref(localStorage.getItem('theme') === 'night')
+
+// Naive UI theme
+const naiveTheme = computed(() => isDarkTheme.value ? darkTheme : null)
 
 interface TitleChangeData {
   title: string
@@ -56,7 +74,7 @@ const pageTitle = ref('eAIP Charts')
 const pageSubtitle = ref('')
 
 const openSettings = () => {
-  router.push('/settings')
+  isSettingsOpen.value = true
 }
 
 // Responsive handling
@@ -88,6 +106,15 @@ onMounted(() => {
     pageTitle.value = data.title
     pageSubtitle.value = data.subTitle || ''
   })
+
+  // 监听主题变化
+  pubsub.subscribe('theme-changed', (_, theme: string) => {
+    isDarkTheme.value = theme === 'night'
+  })
+
+  // 初始化主题
+  const theme = localStorage.getItem('theme')
+  isDarkTheme.value = theme === 'night'
 })
 
 onUnmounted(() => {

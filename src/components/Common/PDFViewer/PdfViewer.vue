@@ -286,6 +286,22 @@ const rotationKey = ref(0) // 专门用于旋转的key
 const pdfWidth = ref<number>(600) // PDF显示宽度
 const baseWidth = ref<number>(595) // PDF原始宽度 (A4标准)
 
+// 从 localStorage 读取用户设置
+const zoomSpeedSetting = ref(localStorage.getItem('pdfZoomSpeed') || 'normal')
+const defaultZoomSetting = ref(localStorage.getItem('pdfDefaultZoom') || 'fit-width')
+
+// 根据设置计算缩放因子
+const getZoomScaleFactor = (direction: 'in' | 'out'): number => {
+  const speedMap = {
+    slow: { in: 1.08, out: 0.93 },
+    normal: { in: 1.1, out: 0.91 },
+    fast: { in: 1.15, out: 0.87 }
+  }
+  
+  const speed = speedMap[zoomSpeedSetting.value as keyof typeof speedMap] || speedMap.normal
+  return direction === 'in' ? speed.in : speed.out
+}
+
 // 大文件处理
 const showLargeFileWarning = ref(false)
 const useIframeMode = ref(false)
@@ -415,12 +431,14 @@ const zoomAtCenter = (scaleFactor: number) => {
 // 缩放控制 - 使用width属性
 const zoomIn = () => {
   // 按钮缩放：以PDF中心为基准，不调整平移位置，避免抖动
-  zoomAtCenter(1.25)
+  const scaleFactor = getZoomScaleFactor('in')
+  zoomAtCenter(scaleFactor)
 }
 
 const zoomOut = () => {
   // 按钮缩放：以PDF中心为基准，不调整平移位置，避免抖动
-  zoomAtCenter(0.8)
+  const scaleFactor = getZoomScaleFactor('out')
+  zoomAtCenter(scaleFactor)
 }
 
 const resetZoom = () => {
@@ -491,6 +509,32 @@ const downloadPDF = () => {
   }
 }
 
+// 应用默认缩放设置
+const applyDefaultZoom = () => {
+  if (!pdfContainer.value) return
+  
+  switch (defaultZoomSetting.value) {
+    case 'fit-width':
+      fitToWidth()
+      break
+    case 'fit-page':
+      fitToPage()
+      break
+    case '100':
+      zoomLevel.value = 1.0
+      pdfWidth.value = baseWidth.value
+      resetPan()
+      break
+    case '150':
+      zoomLevel.value = 1.5
+      pdfWidth.value = baseWidth.value * 1.5
+      resetPan()
+      break
+    default:
+      fitToWidth()
+  }
+}
+
 // Vue PDF Embed 事件处理
 const handlePdfLoaded = async (doc: any) => {
   totalPages.value = doc.numPages
@@ -514,14 +558,8 @@ const handlePdfLoaded = async (doc: any) => {
       return // 等待用户选择
     }
     
-    // 计算初始显示宽度
-    if (pdfContainer.value) {
-      const containerWidth = pdfContainer.value.clientWidth - 100
-      zoomLevel.value = Math.min(containerWidth / baseWidth.value, 1.0)
-      pdfWidth.value = baseWidth.value * zoomLevel.value
-    } else {
-      pdfWidth.value = baseWidth.value * zoomLevel.value
-    }
+    // 应用用户设置的默认缩放
+    applyDefaultZoom()
     
   } catch (err) {
     // 使用默认值
@@ -546,14 +584,8 @@ const handleUseIframeMode = () => {
 
 const handleUsePdfEmbed = () => {
   showLargeFileWarning.value = false
-  // 继续使用vue-pdf-embed，设置初始宽度
-  if (pdfContainer.value) {
-    const containerWidth = pdfContainer.value.clientWidth - 100
-    zoomLevel.value = Math.min(containerWidth / baseWidth.value, 1.0)
-    pdfWidth.value = baseWidth.value * zoomLevel.value
-  } else {
-    pdfWidth.value = baseWidth.value * zoomLevel.value
-  }
+  // 继续使用vue-pdf-embed，应用用户设置的默认缩放
+  applyDefaultZoom()
   
   isLoading.value = false
   emit('loaded', totalPages.value)
@@ -586,8 +618,8 @@ const handleWheel = (event: WheelEvent) => {
   const delta = event.deltaY
   if (delta === 0) return
   
-  // 统一使用缩放，步长适中
-  const scaleFactor = delta < 0 ? 1.1 : 0.91
+  // 使用用户设置的缩放速度
+  const scaleFactor = delta < 0 ? getZoomScaleFactor('in') : getZoomScaleFactor('out')
   zoomAtCenter(scaleFactor)
 }
 
@@ -762,17 +794,28 @@ watch(() => props.initialPage, (newPage) => {
 
 // 不再需要监听缩放变化，因为vue-pdf-embed会响应width属性变化
 
+// 监听设置变化
+const handleStorageChange = (e: StorageEvent) => {
+  if (e.key === 'pdfZoomSpeed' && e.newValue) {
+    zoomSpeedSetting.value = e.newValue
+  } else if (e.key === 'pdfDefaultZoom' && e.newValue) {
+    defaultZoomSetting.value = e.newValue
+  }
+}
+
 // Lifecycle
 onMounted(() => {
   // 添加事件监听
   window.addEventListener('keydown', handleKeyDown)
   window.addEventListener('resize', handleResize)
+  window.addEventListener('storage', handleStorageChange)
 })
 
 onUnmounted(() => {
   // 清理事件监听
   window.removeEventListener('keydown', handleKeyDown)
   window.removeEventListener('resize', handleResize)
+  window.removeEventListener('storage', handleStorageChange)
 })
 
 // 暴露方法给父组件
