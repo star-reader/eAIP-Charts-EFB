@@ -82,16 +82,8 @@ const handleNavClick = async (item: any) => {
     emit('navigate', item)
     props.onNavClick(item)
 }
-
-onMounted(() => {
-    // 初始化
-})
-
-onUnmounted(() => {
-    // 清理工作
-})
 </script>
 
 <style lang='scss' scoped>
-@import '@/styles/subnavbar-common.scss';
+@use '@/styles/subnavbar-common.scss';
 </style>

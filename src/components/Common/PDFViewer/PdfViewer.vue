@@ -35,6 +35,7 @@
     <div 
       v-else
       class="pdf-content" 
+      :class="{ 'is-dragging': isDragging }"
       ref="pdfContainer"
       @wheel="handleWheel"
       @mousedown="handleMouseDown"
@@ -314,8 +315,7 @@ const pdfContainerStyle = computed(() => {
   
   return {
     transform: `translate(${validPanX}px, ${validPanY}px)`,
-    transition: isDragging.value ? 'none' : 'transform 0.2s ease',
-    cursor: isDragging.value ? 'grabbing' : 'grab'
+    transition: isDragging.value ? 'none' : 'transform 0.2s ease'
   }
 })
 
@@ -385,29 +385,42 @@ const zoomAtPoint = (scaleFactor: number, centerX?: number, centerY?: number) =>
   }
 }
 
-// 缩放控制 - 使用width属性
-const zoomIn = () => {
-  // 按钮缩放使用PDF容器中心
-  if (pdfContainer.value) {
-    const rect = pdfContainer.value.getBoundingClientRect()
-    const centerX = rect.left + rect.width / 2
-    const centerY = rect.top + rect.height / 2
-    zoomAtPoint(1.25, centerX, centerY)
+// 以PDF中心为基准的缩放（用于按钮操作，不调整平移位置）
+const zoomAtCenter = (scaleFactor: number) => {
+  // 确保baseWidth已经初始化
+  if (baseWidth.value <= 0) {
+    console.warn('baseWidth not initialized yet, skipping zoom')
+    return
+  }
+  
+  // 大文件性能优化：限制最大缩放
+  const maxZoom = isLargeFile.value ? 3.0 : 6.0
+  
+  const oldZoom = zoomLevel.value
+  const newZoom = Math.max(0.25, Math.min(maxZoom, oldZoom * scaleFactor))
+  
+  if (newZoom === oldZoom) return // 没有变化就不处理
+  
+  // 计算新的PDF宽度，确保不为0或负数
+  const newPdfWidth = baseWidth.value * newZoom
+  if (newPdfWidth > 0) {
+    zoomLevel.value = newZoom
+    pdfWidth.value = newPdfWidth
+    emit('zoomChange', zoomLevel.value)
   } else {
-    zoomAtPoint(1.25)
+    console.warn('Invalid PDF width calculated:', newPdfWidth)
   }
 }
 
+// 缩放控制 - 使用width属性
+const zoomIn = () => {
+  // 按钮缩放：以PDF中心为基准，不调整平移位置，避免抖动
+  zoomAtCenter(1.25)
+}
+
 const zoomOut = () => {
-  // 按钮缩放使用PDF容器中心
-  if (pdfContainer.value) {
-    const rect = pdfContainer.value.getBoundingClientRect()
-    const centerX = rect.left + rect.width / 2
-    const centerY = rect.top + rect.height / 2
-    zoomAtPoint(0.8, centerX, centerY)
-  } else {
-    zoomAtPoint(0.8)
-  }
+  // 按钮缩放：以PDF中心为基准，不调整平移位置，避免抖动
+  zoomAtCenter(0.8)
 }
 
 const resetZoom = () => {
@@ -490,9 +503,10 @@ const handlePdfLoaded = async (doc: any) => {
     baseWidth.value = viewport.width
     
     // 检测是否为大文件（基于宽度或页数）
-    const isLargeWidth = baseWidth.value > 2000
-    const isManyPages = totalPages.value > 20
-    isLargeFile.value = isLargeWidth || isManyPages
+    const isLargeWidth = baseWidth.value > 3000
+    // 优化：机场AD也会显示大文件，其实是不对的，具体原因是页数太多，ENC只有一页；所以这里判断largeWidth后也要判断页数等于1
+    // const isManyPages = totalPages.value > 20
+    isLargeFile.value = isLargeWidth && totalPages.value == 1
     
     // 如果是大文件，显示警告
     if (isLargeFile.value) {
@@ -552,62 +566,29 @@ const handlePdfRendered = () => {
 const handlePdfProgress = (progress: any) => {
 }
 
-// 鼠标滚轮处理
+// 鼠标滚轮处理 - 只控制缩放
 const handleWheel = (event: WheelEvent) => {
   event.preventDefault()
+  event.stopPropagation()
   
   // 如果PDF还在加载中，阻止缩放操作
   if (isLoading.value || !pdfDoc.value) {
     return
   }
   
-  // 更新鼠标位置
-  mouseX.value = event.clientX
-  mouseY.value = event.clientY
-  
-  if (event.ctrlKey || event.metaKey) {
-    // Ctrl+滚轮：缩放（以鼠标位置为中心）
-    const currentTime = Date.now()
-    
-    // 节流处理，避免过于频繁的缩放操作
-    if (currentTime - lastWheelTime.value < wheelThrottleDelay) {
-      return
-    }
-    lastWheelTime.value = currentTime
-    
-    const delta = event.deltaY
-    
-    // 使用稳定的缩放算法，基于delta大小动态调整
-    const absDelta = Math.abs(delta)
-    let scaleFactor
-    
-    if (absDelta < 10) {
-      // 触控板的精细操作：小步长
-      scaleFactor = delta < 0 ? 1.05 : 0.95
-    } else if (absDelta < 50) {
-      // 中等步长
-      scaleFactor = delta < 0 ? 1.08 : 0.92
-    } else {
-      // 鼠标滚轮的大步长
-      scaleFactor = delta < 0 ? 1.12 : 0.88
-    }
-    
-    // 立即进行缩放
-    zoomAtPoint(scaleFactor, mouseX.value, mouseY.value)
-  } else {
-    // 普通滚轮：平移
-    // 降低平移速度
-    const panSpeed = 0.8
-    
-    if (event.shiftKey) {
-      // Shift+滚轮：水平滚动
-      panX.value -= event.deltaY * panSpeed
-    } else {
-      // 垂直和水平滚动
-      panX.value -= event.deltaX * panSpeed
-      panY.value -= event.deltaY * panSpeed
-    }
+  // 节流处理
+  const currentTime = Date.now()
+  if (currentTime - lastWheelTime.value < wheelThrottleDelay) {
+    return
   }
+  lastWheelTime.value = currentTime
+  
+  const delta = event.deltaY
+  if (delta === 0) return
+  
+  // 统一使用缩放，步长适中
+  const scaleFactor = delta < 0 ? 1.1 : 0.91
+  zoomAtCenter(scaleFactor)
 }
 
 // 鼠标拖拽处理
@@ -830,9 +811,15 @@ defineExpose({
   user-select: none; // 防止拖拽时选中文本
   overflow: hidden;
   align-items: center;
+  cursor: grab;
+  
+  &.is-dragging {
+    cursor: grabbing;
+  }
   
   .pdf-wrapper {
     display: inline-block;
+    cursor: inherit;
     
     .pdf-embed {
       max-width: none; // 允许超出容器进行平移
@@ -842,6 +829,22 @@ defineExpose({
       box-shadow: var(--shadow-heavy);
       background: white;
       display: block;
+      cursor: inherit;
+      
+      // 覆盖 vue-pdf-embed 内部的文本层样式
+      :deep(.textLayer) {
+        cursor: inherit !important;
+        user-select: none !important;
+        
+        span {
+          cursor: inherit !important;
+          user-select: none !important;
+        }
+      }
+      
+      :deep(.annotationLayer) {
+        cursor: inherit !important;
+      }
     }
   }
   

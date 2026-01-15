@@ -27,7 +27,7 @@
         </Icon>
       </button>
 
-      <button 
+      <!-- <button 
         class="action-btn settings-btn"
         @click="openSettings"
         aria-label="Settings"
@@ -35,7 +35,7 @@
         <Icon size="20">
           <SettingsOutline />
         </Icon>
-      </button>
+      </button> -->
     </div>
   </header>
 </template>
