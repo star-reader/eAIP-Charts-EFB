@@ -8,9 +8,9 @@
 .app-nav-bar-wrapper {
     position: fixed;
     width: var(--nav-width-sidebar-md);
-    height: calc(100vh - var(--header-height));
-    top: var(--header-height);
-    // left: var(--spacing-lg);
+    height: calc(100vh - var(--header-height) - var(--safe-area-inset-top) - var(--safe-area-inset-bottom));
+    top: calc(var(--header-height) + var(--safe-area-inset-top));
+    left: var(--safe-area-inset-left);
     z-index: var(--z-nav);
     background: transparent;
     user-select: none;

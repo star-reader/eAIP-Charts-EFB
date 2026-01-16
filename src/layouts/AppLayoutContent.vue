@@ -170,6 +170,7 @@ onUnmounted(() => {
   height: 100vh;
   background: var(--primary-bg);
   color: var(--text-primary);
+  padding-top: var(--safe-area-inset-top);
 }
 
 .main-content {

@@ -80,6 +80,12 @@
   --header-height: 48px;           // Header height
   --bottom-nav-height: 54px;       // Mobile bottom navigation height
   
+  // Safe area insets for PWA/mobile devices
+  --safe-area-inset-top: env(safe-area-inset-top);
+  --safe-area-inset-bottom: env(safe-area-inset-bottom);
+  --safe-area-inset-left: env(safe-area-inset-left);
+  --safe-area-inset-right: env(safe-area-inset-right)
+  
   // Z-index layers
   --z-header: 1000;
   --z-nav: 900;

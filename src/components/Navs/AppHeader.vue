@@ -169,6 +169,9 @@ onMounted(() => {
   background: var(--nav-bg);
   border-bottom: 1px solid var(--nav-border-color);
   padding: 0 var(--spacing-lg);
+  padding-top: var(--safe-area-inset-top);
+  padding-left: max(var(--spacing-lg), var(--safe-area-inset-left));
+  padding-right: max(var(--spacing-lg), var(--safe-area-inset-right));
   position: fixed;
   top: 0;
   left: 0;

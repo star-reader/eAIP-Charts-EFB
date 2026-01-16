@@ -36,7 +36,7 @@
 </template>
 
 <script lang='ts' setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { Icon } from '@vicons/utils'
 import { HomeOutline } from '@vicons/ionicons5'

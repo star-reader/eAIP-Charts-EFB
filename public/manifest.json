@@ -3,6 +3,8 @@
     "short_name": "eAIP Charts EFB",
     "start_url": "/",
     "display": "standalone",
+    "theme_color": "#ffffff",
+    "background_color": "#ffffff",
     "description": "eAIP Charts EFB是SKYline模拟飞行俱乐部全新推出的中国电子航空资料汇编(eAIP)电子飞行包，可阅览全国AIP航图信息。",
     "prefer_related_applications": false,
     "related_applications": [],
