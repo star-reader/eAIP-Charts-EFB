@@ -306,6 +306,9 @@ onMounted(() => {
       gap: var(--spacing-xs);
     }
   }
+  .header-center {
+    display: none !important;
+  }
 }
 
 @media (max-width: 480px) {
@@ -329,6 +332,9 @@ onMounted(() => {
         display: none;
       }
     }
+  }
+  .header-center {
+    display: none !important;
   }
 }
 </style>

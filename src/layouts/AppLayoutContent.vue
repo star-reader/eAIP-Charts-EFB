@@ -191,11 +191,11 @@ onUnmounted(() => {
     background: var(--content-bg);
 
     @media (max-width: 768px) {
-      padding: var(--spacing-md);
+      padding: 0;
     }
 
     @media (max-width: 480px) {
-      padding: var(--spacing-sm);
+      padding: 0;
     }
   }
 }

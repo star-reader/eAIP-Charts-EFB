@@ -65,9 +65,9 @@
           @progress="handlePdfProgress"
           class="pdf-embed"
           :style="{
-            transformOrigin: 'center center',
+            transformOrigin: touchZoomOrigin,
             transform: isTouchZooming ? `scale(${touchZoomScale})` : 'none',
-            transition: isTouchZooming ? 'none' : 'transform 0.1s ease-out'
+            transition: 'none'
           }"
         />
       </div>
@@ -321,13 +321,17 @@ const lastTouchDistance = ref(0) // 上次触摸点距离
 const mouseX = ref(0) // 当前鼠标X位置
 const mouseY = ref(0) // 当前鼠标Y位置
 const lastWheelTime = ref(0) // 上次滚轮时间
-const wheelThrottleDelay = 5 // 节流延迟
+const wheelThrottleDelay = 30 // 节流延迟，30ms平衡流畅度和稳定性
 const isRendering = ref(false) // 是否正在渲染
 const pendingZoom = ref<number | null>(null) // 待处理的缩放级别
 const zoomDebounceTimer = ref<number | null>(null) // 缩放防抖定时器
 const renderAnimationFrame = ref<number | null>(null) // 渲染动画帧ID
 const touchZoomScale = ref(1) // 触摸缩放的临时CSS scale值
 const isTouchZooming = ref(false) // 是否正在触摸缩放中
+const touchZoomCenter = ref<{x: number, y: number} | null>(null) // 触摸缩放的中心点
+const touchZoomStartLevel = ref(1) // 触摸缩放开始时的缩放级别
+const touchZoomStartPan = ref<{x: number, y: number}>({x: 0, y: 0}) // 触摸缩放开始时的pan位置
+const touchZoomOrigin = ref('center center') // 触摸缩放的transform-origin
 
 // Computed
 const pdfSrc = computed(() => props.src)
@@ -445,35 +449,41 @@ const zoomAtPointImmediate = (scaleFactor: number, centerX?: number, centerY?: n
     return
   }
   
-  // 大文件性能优化：限制最大缩放
-  const maxZoom = isLargeFile.value ? 3.0 : 6.0
+  // 限制最大缩放为500%
+  const maxZoom = 5.0
   
-  const oldZoom = zoomLevel.value
-  const newZoom = Math.max(0.25, Math.min(maxZoom, oldZoom * scaleFactor))
-  
-  if (newZoom === oldZoom) return // 没有变化就不处理
-  
-  // 如果提供了中心点，计算缩放后的平移调整
-  if (centerX !== undefined && centerY !== undefined && pdfContainer.value) {
-    const rect = pdfContainer.value.getBoundingClientRect()
+  // 如果是第一次触摸缩放，记录初始状态
+  if (!isTouchZooming.value) {
+    isTouchZooming.value = true
+    touchZoomStartLevel.value = zoomLevel.value
+    touchZoomStartPan.value = { x: panX.value, y: panY.value }
+    touchZoomScale.value = 1 // 重置累积scale
     
-    // 将鼠标位置转换为相对于PDF容器的坐标
-    const relativeX = centerX - rect.left - rect.width / 2
-    const relativeY = centerY - rect.top - rect.height / 2
-    
-    // 计算缩放比例
-    const zoomRatio = newZoom / oldZoom
-    
-    // 调整平移位置，使缩放以鼠标位置为中心
-    panX.value = (panX.value - relativeX) * zoomRatio + relativeX
-    panY.value = (panY.value - relativeY) * zoomRatio + relativeY
+    // 计算transform-origin相对于PDF元素的位置（而不是容器）
+    if (centerX !== undefined && centerY !== undefined && pdfEmbed.value) {
+      const pdfEl = pdfEmbed.value.$el as HTMLElement
+      if (pdfEl) {
+        const rect = pdfEl.getBoundingClientRect()
+        const originX = ((centerX - rect.left) / rect.width) * 100
+        const originY = ((centerY - rect.top) / rect.height) * 100
+        touchZoomOrigin.value = `${originX}% ${originY}%`
+        touchZoomCenter.value = { x: centerX, y: centerY }
+      }
+    }
   }
   
-  // 触摸缩放时：只更新CSS transform，不更新PDF宽度
-  isTouchZooming.value = true
-  touchZoomScale.value = newZoom / zoomLevel.value
+  // 累积缩放比例
+  touchZoomScale.value *= scaleFactor
   
-  // 记录目标缩放级别，但不立即应用到PDF
+  // 计算最终缩放级别，预览和实际都限制在500%
+  const newZoom = Math.max(0.25, Math.min(maxZoom, touchZoomStartLevel.value * touchZoomScale.value))
+  
+  // 限制touchZoomScale，确保CSS预览也不超过500%
+  const maxScale = maxZoom / touchZoomStartLevel.value
+  const minScale = 0.25 / touchZoomStartLevel.value
+  touchZoomScale.value = Math.max(minScale, Math.min(maxScale, touchZoomScale.value))
+  
+  // 更新待处理的缩放级别
   pendingZoom.value = newZoom
 }
 
@@ -481,11 +491,40 @@ const zoomAtPointImmediate = (scaleFactor: number, centerX?: number, centerY?: n
 const finalizeTouchZoom = () => {
   if (pendingZoom.value !== null && isTouchZooming.value) {
     const newZoom = pendingZoom.value
+    const oldZoom = touchZoomStartLevel.value
+    
+    // 如果有缩放中心点，计算最终的pan位置
+    if (touchZoomCenter.value && pdfEmbed.value) {
+      const pdfEl = pdfEmbed.value.$el as HTMLElement
+      if (pdfEl) {
+        const rect = pdfEl.getBoundingClientRect()
+        const centerX = touchZoomCenter.value.x
+        const centerY = touchZoomCenter.value.y
+        
+        // 将中心点转换为相对于PDF元素中心的坐标
+        const relativeX = centerX - rect.left - rect.width / 2
+        const relativeY = centerY - rect.top - rect.height / 2
+        
+        // 计算缩放比例
+        const zoomRatio = newZoom / oldZoom
+        
+        // 从初始状态计算最终pan位置，考虑CSS scale的影响
+        const scaledRelativeX = relativeX / touchZoomScale.value
+        const scaledRelativeY = relativeY / touchZoomScale.value
+        
+        panX.value = (touchZoomStartPan.value.x - scaledRelativeX) * zoomRatio + scaledRelativeX
+        panY.value = (touchZoomStartPan.value.y - scaledRelativeY) * zoomRatio + scaledRelativeY
+      }
+    }
+    
+    // 更新缩放级别
     zoomLevel.value = newZoom
     
     // 重置CSS transform
     touchZoomScale.value = 1
     isTouchZooming.value = false
+    touchZoomCenter.value = null
+    touchZoomOrigin.value = 'center center'
     
     // 应用到PDF宽度
     const newPdfWidth = baseWidth.value * newZoom
@@ -779,15 +818,24 @@ const handleTouchStart = (event: TouchEvent) => {
     isTouchZooming.value = false
     lastMouseX.value = event.touches[0].clientX
     lastMouseY.value = event.touches[0].clientY
+  } else if (event.touches.length === 2) {
+    // 双指：缩放
+    isDragging.value = false
+    isTouch.value = true
+    const touch1 = event.touches[0]
+    const touch2 = event.touches[1]
+    lastTouchDistance.value = Math.sqrt(
+      Math.pow(touch2.clientX - touch1.clientX, 2) +
+      Math.pow(touch2.clientY - touch1.clientY, 2)
+    )
   }
-  // 移动端禁用双指缩放，避免与拖拽冲突
 }
 
 const handleTouchMove = (event: TouchEvent) => {
   event.preventDefault()
   
-  if (event.touches.length === 1 && isDragging.value) {
-    // 单指拖拽
+  if (event.touches.length === 1 && isDragging.value && !isTouchZooming.value) {
+    // 单指拖拽 - 仅在非缩放模式下
     const deltaX = event.touches[0].clientX - lastMouseX.value
     const deltaY = event.touches[0].clientY - lastMouseY.value
     
@@ -796,8 +844,31 @@ const handleTouchMove = (event: TouchEvent) => {
     
     lastMouseX.value = event.touches[0].clientX
     lastMouseY.value = event.touches[0].clientY
+  } else if (event.touches.length === 2) {
+    // 双指缩放
+    isDragging.value = false // 确保停止拖拽
+    
+    const touch1 = event.touches[0]
+    const touch2 = event.touches[1]
+    const currentDistance = Math.sqrt(
+      Math.pow(touch2.clientX - touch1.clientX, 2) +
+      Math.pow(touch2.clientY - touch1.clientY, 2)
+    )
+    
+    if (lastTouchDistance.value > 0) {
+      const scale = currentDistance / lastTouchDistance.value
+      
+      // 计算两指中心点作为缩放中心
+      const centerX = (touch1.clientX + touch2.clientX) / 2
+      const centerY = (touch1.clientY + touch2.clientY) / 2
+      
+      // 直接使用实际缩放比例，不限制，让缩放非常灵敏
+      // 使用CSS transform方式缩放，避免白屏
+      zoomAtPointImmediate(scale, centerX, centerY)
+    }
+    
+    lastTouchDistance.value = currentDistance
   }
-  // 移动端禁用双指缩放
 }
 
 const handleTouchEnd = () => {
