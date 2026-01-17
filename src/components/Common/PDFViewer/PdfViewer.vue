@@ -65,7 +65,9 @@
           @progress="handlePdfProgress"
           class="pdf-embed"
           :style="{
-            transformOrigin: 'center center'
+            transformOrigin: 'center center',
+            transform: isTouchZooming ? `scale(${touchZoomScale})` : 'none',
+            transition: isTouchZooming ? 'none' : 'transform 0.1s ease-out'
           }"
         />
       </div>
@@ -293,9 +295,9 @@ const defaultZoomSetting = ref(localStorage.getItem('pdfDefaultZoom') || 'fit-wi
 // 根据设置计算缩放因子
 const getZoomScaleFactor = (direction: 'in' | 'out'): number => {
   const speedMap = {
-    slow: { in: 1.08, out: 0.93 },
-    normal: { in: 1.1, out: 0.91 },
-    fast: { in: 1.15, out: 0.87 }
+    slow: { in: 1.12, out: 0.89 },
+    normal: { in: 1.15, out: 0.87 },
+    fast: { in: 1.2, out: 0.83 }
   }
   
   const speed = speedMap[zoomSpeedSetting.value as keyof typeof speedMap] || speedMap.normal
@@ -319,7 +321,13 @@ const lastTouchDistance = ref(0) // 上次触摸点距离
 const mouseX = ref(0) // 当前鼠标X位置
 const mouseY = ref(0) // 当前鼠标Y位置
 const lastWheelTime = ref(0) // 上次滚轮时间
-const wheelThrottleDelay = 12 // 节流延迟，约80fps，平衡流畅度和稳定性
+const wheelThrottleDelay = 5 // 节流延迟
+const isRendering = ref(false) // 是否正在渲染
+const pendingZoom = ref<number | null>(null) // 待处理的缩放级别
+const zoomDebounceTimer = ref<number | null>(null) // 缩放防抖定时器
+const renderAnimationFrame = ref<number | null>(null) // 渲染动画帧ID
+const touchZoomScale = ref(1) // 触摸缩放的临时CSS scale值
+const isTouchZooming = ref(false) // 是否正在触摸缩放中
 
 // Computed
 const pdfSrc = computed(() => props.src)
@@ -359,7 +367,36 @@ const previousPage = () => {
 
 
 
-// 以鼠标位置为中心的缩放
+// 应用缩放到PDF（防抖处理）
+const applyZoomToPdf = () => {
+  if (pendingZoom.value !== null && baseWidth.value > 0) {
+    const newPdfWidth = baseWidth.value * pendingZoom.value
+    if (newPdfWidth > 0) {
+      pdfWidth.value = newPdfWidth
+      emit('zoomChange', pendingZoom.value)
+    }
+    pendingZoom.value = null
+  }
+  isRendering.value = false
+}
+
+// 防抖更新PDF宽度
+const debouncedApplyZoom = () => {
+  // 清除之前的定时器
+  if (zoomDebounceTimer.value !== null) {
+    clearTimeout(zoomDebounceTimer.value)
+  }
+  
+  // 设置新的定时器，延迟应用缩放
+  zoomDebounceTimer.value = window.setTimeout(() => {
+    if (renderAnimationFrame.value !== null) {
+      cancelAnimationFrame(renderAnimationFrame.value)
+    }
+    renderAnimationFrame.value = requestAnimationFrame(applyZoomToPdf)
+  }, 100) // 100ms防抖延迟
+}
+
+// 以鼠标位置为中心的缩放（用于滚轮，带防抖）
 const zoomAtPoint = (scaleFactor: number, centerX?: number, centerY?: number) => {
   // 确保baseWidth已经初始化
   if (baseWidth.value <= 0) {
@@ -391,14 +428,73 @@ const zoomAtPoint = (scaleFactor: number, centerX?: number, centerY?: number) =>
     panY.value = (panY.value - relativeY) * zoomRatio + relativeY
   }
   
-  // 计算新的PDF宽度，确保不为0或负数
-  const newPdfWidth = baseWidth.value * newZoom
-  if (newPdfWidth > 0) {
+  // 立即更新缩放级别（用于显示）
+  zoomLevel.value = newZoom
+  
+  // 延迟更新PDF宽度（防抖）
+  pendingZoom.value = newZoom
+  isRendering.value = true
+  debouncedApplyZoom()
+}
+
+// 以鼠标位置为中心的缩放（用于触摸，使用CSS transform）
+const zoomAtPointImmediate = (scaleFactor: number, centerX?: number, centerY?: number) => {
+  // 确保baseWidth已经初始化
+  if (baseWidth.value <= 0) {
+    console.warn('baseWidth not initialized yet, skipping zoom')
+    return
+  }
+  
+  // 大文件性能优化：限制最大缩放
+  const maxZoom = isLargeFile.value ? 3.0 : 6.0
+  
+  const oldZoom = zoomLevel.value
+  const newZoom = Math.max(0.25, Math.min(maxZoom, oldZoom * scaleFactor))
+  
+  if (newZoom === oldZoom) return // 没有变化就不处理
+  
+  // 如果提供了中心点，计算缩放后的平移调整
+  if (centerX !== undefined && centerY !== undefined && pdfContainer.value) {
+    const rect = pdfContainer.value.getBoundingClientRect()
+    
+    // 将鼠标位置转换为相对于PDF容器的坐标
+    const relativeX = centerX - rect.left - rect.width / 2
+    const relativeY = centerY - rect.top - rect.height / 2
+    
+    // 计算缩放比例
+    const zoomRatio = newZoom / oldZoom
+    
+    // 调整平移位置，使缩放以鼠标位置为中心
+    panX.value = (panX.value - relativeX) * zoomRatio + relativeX
+    panY.value = (panY.value - relativeY) * zoomRatio + relativeY
+  }
+  
+  // 触摸缩放时：只更新CSS transform，不更新PDF宽度
+  isTouchZooming.value = true
+  touchZoomScale.value = newZoom / zoomLevel.value
+  
+  // 记录目标缩放级别，但不立即应用到PDF
+  pendingZoom.value = newZoom
+}
+
+// 完成触摸缩放，应用最终的缩放值
+const finalizeTouchZoom = () => {
+  if (pendingZoom.value !== null && isTouchZooming.value) {
+    const newZoom = pendingZoom.value
     zoomLevel.value = newZoom
-    pdfWidth.value = newPdfWidth
-    emit('zoomChange', zoomLevel.value)
-  } else {
-    console.warn('Invalid PDF width calculated:', newPdfWidth)
+    
+    // 重置CSS transform
+    touchZoomScale.value = 1
+    isTouchZooming.value = false
+    
+    // 应用到PDF宽度
+    const newPdfWidth = baseWidth.value * newZoom
+    if (newPdfWidth > 0) {
+      pdfWidth.value = newPdfWidth
+      emit('zoomChange', newZoom)
+    }
+    
+    pendingZoom.value = null
   }
 }
 
@@ -418,15 +514,13 @@ const zoomAtCenter = (scaleFactor: number) => {
   
   if (newZoom === oldZoom) return // 没有变化就不处理
   
-  // 计算新的PDF宽度，确保不为0或负数
-  const newPdfWidth = baseWidth.value * newZoom
-  if (newPdfWidth > 0) {
-    zoomLevel.value = newZoom
-    pdfWidth.value = newPdfWidth
-    emit('zoomChange', zoomLevel.value)
-  } else {
-    console.warn('Invalid PDF width calculated:', newPdfWidth)
-  }
+  // 立即更新缩放级别（用于显示）
+  zoomLevel.value = newZoom
+  
+  // 延迟更新PDF宽度（防抖）
+  pendingZoom.value = newZoom
+  isRendering.value = true
+  debouncedApplyZoom()
 }
 
 // 缩放控制 - 使用width属性
@@ -611,6 +705,7 @@ const handleUsePdfEmbed = async () => {
 
 const handlePdfRendered = () => {
   isLoading.value = false
+  isRendering.value = false
 }
 
 const handlePdfProgress = (progress: any) => {
@@ -681,19 +776,11 @@ const handleTouchStart = (event: TouchEvent) => {
     // 单指：拖拽
     isDragging.value = true
     isTouch.value = true
+    isTouchZooming.value = false
     lastMouseX.value = event.touches[0].clientX
     lastMouseY.value = event.touches[0].clientY
-  } else if (event.touches.length === 2) {
-    // 双指：缩放
-    isDragging.value = false
-    isTouch.value = true
-    const touch1 = event.touches[0]
-    const touch2 = event.touches[1]
-    lastTouchDistance.value = Math.sqrt(
-      Math.pow(touch2.clientX - touch1.clientX, 2) +
-      Math.pow(touch2.clientY - touch1.clientY, 2)
-    )
   }
+  // 移动端禁用双指缩放，避免与拖拽冲突
 }
 
 const handleTouchMove = (event: TouchEvent) => {
@@ -709,35 +796,19 @@ const handleTouchMove = (event: TouchEvent) => {
     
     lastMouseX.value = event.touches[0].clientX
     lastMouseY.value = event.touches[0].clientY
-  } else if (event.touches.length === 2) {
-    // 双指缩放
-    const touch1 = event.touches[0]
-    const touch2 = event.touches[1]
-    const currentDistance = Math.sqrt(
-      Math.pow(touch2.clientX - touch1.clientX, 2) +
-      Math.pow(touch2.clientY - touch1.clientY, 2)
-    )
-    
-    if (lastTouchDistance.value > 0) {
-      const scale = currentDistance / lastTouchDistance.value
-      
-      // 计算两指中心点作为缩放中心
-      const centerX = (touch1.clientX + touch2.clientX) / 2
-      const centerY = (touch1.clientY + touch2.clientY) / 2
-      
-      // 使用中心点缩放，但限制缩放速度
-      const limitedScale = Math.max(0.95, Math.min(1.05, scale))
-      zoomAtPoint(limitedScale, centerX, centerY)
-    }
-    
-    lastTouchDistance.value = currentDistance
   }
+  // 移动端禁用双指缩放
 }
 
 const handleTouchEnd = () => {
   isDragging.value = false
   isTouch.value = false
   lastTouchDistance.value = 0
+  
+  // 触摸结束时应用最终的缩放
+  if (isTouchZooming.value) {
+    finalizeTouchZoom()
+  }
 }
 
 // 重置平移
@@ -835,6 +906,14 @@ onUnmounted(() => {
   window.removeEventListener('keydown', handleKeyDown)
   window.removeEventListener('resize', handleResize)
   window.removeEventListener('storage', handleStorageChange)
+  
+  // 清理定时器和动画帧
+  if (zoomDebounceTimer.value !== null) {
+    clearTimeout(zoomDebounceTimer.value)
+  }
+  if (renderAnimationFrame.value !== null) {
+    cancelAnimationFrame(renderAnimationFrame.value)
+  }
 })
 
 // 暴露方法给父组件
@@ -856,7 +935,7 @@ defineExpose({
 <style lang='scss' scoped>
 .pdf-viewer-container {
   display: flex;
-  height: calc(100vh - var(--header-height));
+  height: calc(100vh);
   background: var(--primary-bg);
   position: relative;
 }
