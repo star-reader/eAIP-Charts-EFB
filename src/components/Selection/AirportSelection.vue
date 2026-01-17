@@ -320,11 +320,11 @@ defineExpose({
   // 桌面端样式
   &.desktop {
     position: fixed;
-    top: var(--header-height);
+    top: calc(var(--header-height) + var(--safe-area-inset-top));
     // left: calc(var(--nav-width-sidebar-md) + var(--spacing-lg));
     left: var(--nav-width-sidebar-md);
     width: 360px;
-    height: calc(100vh - var(--header-height) - 40px);
+    height: calc(100vh - var(--header-height) - 40px - var(--safe-area-inset-top));
     margin: var(--spacing-lg) 0;
     
     @media (min-width: 1920px) {
@@ -400,7 +400,7 @@ defineExpose({
   }
 
   .search-section {
-    padding: var(--spacing-sm) var(--spacing-lg);
+    padding: var(--spacing-sm);
     border-bottom: 1px solid var(--border-color);
     flex-shrink: 0;
 

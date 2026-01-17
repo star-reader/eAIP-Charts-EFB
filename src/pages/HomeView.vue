@@ -75,7 +75,7 @@ onMounted(() => {
     display: flex;
     align-items: center;
     justify-content: center;
-    min-height: 100%;
+    min-height: calc(100% - var(--safe-area-inset-top));
     padding: var(--spacing-xl);
     background: var(--content-bg);
 }

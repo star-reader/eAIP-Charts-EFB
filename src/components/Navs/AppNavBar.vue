@@ -362,7 +362,6 @@ onUnmounted(() => {
     // height: calc(100vh - var(--header-height) - 40px);
     height: 100%;
     background: var(--nav-bg);
-    // border-radius: var(--radius-md);
     padding: var(--spacing-sm) 0;
     box-shadow: var(--shadow-medium);
 
@@ -373,7 +372,7 @@ onUnmounted(() => {
         display: flex;
         flex-direction: column;
         align-items: center;
-        height: 100%;
+        height: calc(100% + var(--safe-area-inset-bottom));
         gap: var(--spacing-md);
         // justify-content: center;
         

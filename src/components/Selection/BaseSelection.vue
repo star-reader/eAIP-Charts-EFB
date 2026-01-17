@@ -259,7 +259,7 @@ defineExpose({
   display: flex;
   flex-direction: column;
   opacity: 0;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.1, 1);
   
   &.show {
     opacity: 1;
@@ -268,19 +268,19 @@ defineExpose({
   // 桌面端样式 - 简洁显示效果
   &.desktop {
     position: fixed;
-    top: var(--header-height);
+    top: calc(var(--header-height) + var(--safe-area-inset-top));
     left: var(--nav-width-sidebar-md);
     width: 360px;
-    height: calc(100vh - var(--header-height) - 40px);
+    height: calc(100vh - var(--header-height) - 40px - var(--safe-area-inset-top) - var(--safe-area-inset-bottom));
     margin: var(--spacing-lg) 0;
     
     // 桌面端动画：轻微缩放显示
     transform: scale(0.95);
     
-    &.show {
+    &.show {  
       transform: scale(1);
       opacity: 1;
-      animation: desktopFadeIn 0.2s ease-out;
+      // animation: desktopFadeIn 0.2s ease-out;
     }
     
     @media (min-width: 1920px) {

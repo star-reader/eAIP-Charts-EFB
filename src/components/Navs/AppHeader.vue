@@ -165,7 +165,7 @@ onMounted(() => {
 .app-header {
   display: flex;
   align-items: center;
-  height: var(--header-height);
+  height: calc(var(--header-height) + var(--safe-area-inset-top));
   background: var(--nav-bg);
   border-bottom: 1px solid var(--nav-border-color);
   padding: 0 var(--spacing-lg);
@@ -211,7 +211,7 @@ onMounted(() => {
   .header-center {
     position: absolute;
     left: 50%;
-    top: 50%;
+    top: calc(50% + var(--safe-area-inset-top)/2);
     transform: translate(-50%, -50%);
     display: flex;
     flex-direction: column;

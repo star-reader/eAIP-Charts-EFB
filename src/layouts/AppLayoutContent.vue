@@ -167,7 +167,7 @@ onUnmounted(() => {
 .app-layout {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: calc(100vh);
   background: var(--primary-bg);
   color: var(--text-primary);
   padding-top: var(--safe-area-inset-top);
@@ -175,11 +175,9 @@ onUnmounted(() => {
 
 .main-content {
   flex: 1;
-  margin-top: var(--header-height);
-  margin-left: var(--nav-width-sidebar-md); // Default medium screen navigation width
+  margin-left: var(--nav-width-sidebar-md);
   margin-bottom: 0;
   transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  overflow: hidden;
   display: flex;
   flex-direction: column;
 
