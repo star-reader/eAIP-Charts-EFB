@@ -410,6 +410,8 @@ defineExpose({
       flex: 1;
       overflow-y: auto;
       padding: var(--spacing-xs) 0;
+      overflow-x: hidden;
+      word-break: break-all;
 
       .section-group {
         margin-bottom: var(--spacing-md);

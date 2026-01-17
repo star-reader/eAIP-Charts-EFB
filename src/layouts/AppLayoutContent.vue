@@ -174,12 +174,15 @@ onUnmounted(() => {
 }
 
 .main-content {
-  flex: 1;
+  // flex: 1;
+  position: relative;
   margin-left: var(--nav-width-sidebar-md);
   margin-bottom: 0;
   transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   flex-direction: column;
+  top: calc(0 - var(--header-height) + var(--safe-area-inset-top) - var(--safe-area-inset-bottom));
+  height: 100%;
 
   .content-container {
     flex: 1;

@@ -165,6 +165,8 @@
     .airports-list {
       flex: 1;
       overflow-y: auto;
+      overflow-x: hidden;
+      word-break: break-all;
       padding: var(--spacing-xs) 0;
 
       .section-group {

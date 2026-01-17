@@ -935,7 +935,7 @@ defineExpose({
 <style lang='scss' scoped>
 .pdf-viewer-container {
   display: flex;
-  height: calc(100vh);
+  height: 100vh;
   background: var(--primary-bg);
   position: relative;
 }
